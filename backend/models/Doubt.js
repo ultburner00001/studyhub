@@ -1,45 +1,10 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const doubtSchema = new mongoose.Schema({
-  question: {
-    type: String,
-    required: [true, 'Question is required'],
-    trim: true
-  },
-  description: {
-    type: String,
-    trim: true
-  },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  answers: [{
-    text: {
-      type: String,
-      required: true
-    },
-    author: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  isResolved: {
-    type: Boolean,
-    default: false
-  }
-}, {
-  timestamps: true
+  name: { type: String },
+  question: { type: String, required: true },
+  subject: { type: String },
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Doubt', doubtSchema);
+export default mongoose.model("Doubt", doubtSchema);
