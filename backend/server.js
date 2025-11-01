@@ -1,42 +1,50 @@
-// Dependency Imports
+// ---------------------------
+// 📦 Dependency Imports
+// ---------------------------
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-// Validate required environment variables early
+// ---------------------------
+// ✅ Environment Variable Validation
+// ---------------------------
 if (!process.env.MONGODB_URI || !process.env.JWT_SECRET) {
-  console.error('Missing required environment variables. Please set MONGODB_URI and JWT_SECRET in backend/.env');
+  console.error('❌ Missing required environment variables: MONGODB_URI or JWT_SECRET.');
   process.exit(1);
 }
 
-// Shared token helper
+// ---------------------------
+// 🧩 Shared Utils & Models
+// ---------------------------
 const { generateToken } = require('./utils/token');
+const User = require('./models/User');
+const Note = require('./models/Note');
+const Doubt = require('./models/Doubt');
+const Timetable = require('./models/Timetable');
+const { auth, adminOnly } = require('./middleware/auth');
 
-// Express App Initialization
+// ---------------------------
+// 🚀 Express App Initialization
+// ---------------------------
 const app = express();
 
-// ✅ Configure CORS properly for production + dev
-const cors = require('cors');
-
-// Define allowed frontend origins (update with your exact Vercel URLs)
+// ---------------------------
+// 🌐 CORS Configuration
+// ---------------------------
 const allowedOrigins = [
   'https://studyhub-rouge.vercel.app',
   'https://studyhub-cqor2e33g-siddharth-amraotkars-u.projects.vercel.app',
-  'http://localhost:3000'
+  'http://localhost:3000',
 ];
 
-// Use CORS middleware
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error('Not allowed by CORS'));
-      }
+      if (!origin) return callback(null, true); // Allow requests with no origin (mobile apps, Postman)
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.warn(`🚫 Blocked by CORS: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -44,24 +52,30 @@ app.use(
   })
 );
 
+// Allow preflight (CORS) checks
+app.options('*', cors());
 
-// Middleware Configuration
+// ---------------------------
+// ⚙️ Middleware
+// ---------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection — connect and start server only after successful connection
-mongoose.connect(process.env.MONGODB_URI)
+// ---------------------------
+// 🧠 MongoDB Connection
+// ---------------------------
+mongoose
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
 
     const port = process.env.PORT || 5000;
+    const baseURL =
+      process.env.NODE_ENV === 'production'
+        ? process.env.RENDER_EXTERNAL_URL || 'https://studyhub-21ux.onrender.com'
+        : `http://localhost:${port}`;
 
     app.listen(port, () => {
-      const baseURL =
-        process.env.NODE_ENV === 'production'
-          ? process.env.RENDER_EXTERNAL_URL || 'https://studyhub-21ux.onrender.com'
-          : `http://localhost:${port}`;
-
       console.log(`🚀 StudyHub Backend running on port ${port}`);
       console.log(`🌐 API base: ${baseURL}/api`);
     });
@@ -71,24 +85,21 @@ mongoose.connect(process.env.MONGODB_URI)
     process.exit(1);
   });
 
-// Model Imports
-const User = require('./models/User');
-const Note = require('./models/Note');
-const Doubt = require('./models/Doubt');
-const Timetable = require('./models/Timetable');
+// ---------------------------
+// 🧭 Routes
+// ---------------------------
 
-// Middleware Imports
-const { auth, adminOnly } = require('./middleware/auth');
-
-// Mount auth routes (exposes /api/auth/register, /api/auth/login, /api/auth/me)
+// Auth Routes
 app.use('/api/auth', require('./routes/auth'));
 
-// Health Check Endpoint
+// Health Check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Server is running fine ✅' });
 });
 
-// Admin Dashboard Stats
+// ---------------------------
+// 👑 Admin Dashboard Stats
+// ---------------------------
 app.get('/api/admin/stats', async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
@@ -108,28 +119,30 @@ app.get('/api/admin/stats', async (req, res) => {
     const recentDoubts = await Doubt.find().populate('author', 'name').sort({ createdAt: -1 }).limit(3);
 
     const recentActivity = [
-      ...recentUsers.map(user => ({
+      ...recentUsers.map((user) => ({
         type: 'user',
         action: 'registered',
         title: user.name,
         user: 'System',
-        time: user.createdAt
+        time: user.createdAt,
       })),
-      ...recentNotes.map(note => ({
+      ...recentNotes.map((note) => ({
         type: 'note',
         action: 'created',
         title: note.title,
         user: note.author.name,
-        time: note.createdAt
+        time: note.createdAt,
       })),
-      ...recentDoubts.map(doubt => ({
+      ...recentDoubts.map((doubt) => ({
         type: 'doubt',
         action: 'asked',
         title: doubt.question,
         user: doubt.author.name,
-        time: doubt.createdAt
-      }))
-    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 6);
+        time: doubt.createdAt,
+      })),
+    ]
+      .sort((a, b) => new Date(b.time) - new Date(a.time))
+      .slice(0, 6);
 
     res.json({
       success: true,
@@ -141,8 +154,8 @@ app.get('/api/admin/stats', async (req, res) => {
         todayUsers,
         todayNotes,
         todayDoubts,
-        recentActivity
-      }
+        recentActivity,
+      },
     });
   } catch (error) {
     console.error('Admin stats error:', error);
@@ -150,7 +163,9 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
-// Example Notes Routes
+// ---------------------------
+// 📝 Notes Routes
+// ---------------------------
 app.get('/api/notes', auth, async (req, res) => {
   try {
     const notes = await Note.find({ author: req.user._id }).sort({ updatedAt: -1 });
@@ -175,13 +190,17 @@ app.post('/api/notes', auth, async (req, res) => {
   }
 });
 
-// Fallback for unknown endpoints
+// ---------------------------
+// 🚫 Fallback & Error Handling
+// ---------------------------
 app.use('*', (req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found' });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err);
+  console.error('💥 Unhandled Error:', err);
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ success: false, message: 'CORS error: Origin not allowed' });
+  }
   res.status(500).json({ success: false, message: 'Something went wrong!' });
 });
