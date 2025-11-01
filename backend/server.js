@@ -30,7 +30,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // CORS Configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://studyhub-rouge.vercel.app', 'http://127.0.0.1:3000'];
 console.log('Allowed origins for CORS:', allowedOrigins);
 
 function isOriginAllowed(origin, allowedOrigins) {
