@@ -30,21 +30,23 @@ const { auth, adminOnly } = require('./middleware/auth');
 const app = express();
 
 // ---------------------------
-// 🌐 CORS Configuration
+// 🌐 CORS Configuration (Main Fix)
 // ---------------------------
 const allowedOrigins = [
   'https://studyhub-rouge.vercel.app',
-  'https://studyhub-cqor2e33g-siddharth-amraotkars-u.projects.vercel.app',
-  'http://localhost:3000',
+  'https://studyhub-cqor2e33g-siddharth-amraotkars-projects.vercel.app',
+  'http://localhost:3000'
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // Allow requests with no origin (mobile apps, Postman)
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      console.warn(`🚫 Blocked by CORS: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`🚫 Blocked by CORS: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -52,7 +54,7 @@ app.use(
   })
 );
 
-// Allow preflight (CORS) checks
+// Allow all OPTIONS preflight requests
 app.options('*', cors());
 
 // ---------------------------
