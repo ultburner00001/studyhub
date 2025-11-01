@@ -17,22 +17,33 @@ const { generateToken } = require('./utils/token');
 const app = express();
 
 // ✅ Configure CORS properly for production + dev
+const cors = require('cors');
+
+// Define allowed frontend origins (update with your exact Vercel URLs)
 const allowedOrigins = [
   'https://studyhub-rouge.vercel.app',
+  'https://studyhub-cqor2e33g-siddharth-amraotkars-u.projects.vercel.app',
   'http://localhost:3000'
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log("❌ Blocked by CORS:", origin);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-}));
+// Use CORS middleware
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
 
 // Middleware Configuration
 app.use(express.json());
