@@ -18,20 +18,20 @@ const app = express();
 
 // ✅ Configure CORS properly for production + dev
 const allowedOrigins = [
-  'https://studyhub-rouge.vercel.app', // your frontend on Vercel
-  'http://localhost:3000',             // for local dev testing
+  'https://studyhub-rouge.vercel.app',
+  'http://localhost:3000'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      callback(null, true);
+    } else {
+      console.log("❌ Blocked by CORS:", origin);
+      callback(new Error("Not allowed by CORS"));
     }
-    console.error(`🚫 CORS blocked origin: ${origin}`);
-    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
 
 // Middleware Configuration
