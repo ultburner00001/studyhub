@@ -44,9 +44,15 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('✅ Connected to MongoDB');
 
     const port = process.env.PORT || 5000;
+
     app.listen(port, () => {
+      const baseURL =
+        process.env.NODE_ENV === 'production'
+          ? process.env.RENDER_EXTERNAL_URL || 'https://studyhub-21ux.onrender.com'
+          : `http://localhost:${port}`;
+
       console.log(`🚀 StudyHub Backend running on port ${port}`);
-      console.log(`🌐 API base: http://localhost:${port}/api`);
+      console.log(`🌐 API base: ${baseURL}/api`);
     });
   })
   .catch((err) => {
