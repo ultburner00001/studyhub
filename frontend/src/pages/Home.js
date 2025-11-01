@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+// src/pages/Home.js
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 function Home() {
   const [open, setOpen] = useState(false);
 
+  // ✅ Navigation menu items
   const menu = [
     { label: "Notes", href: "/notes" },
     { label: "Courses", href: "/courses" },
     { label: "Timetable", href: "/timetable" },
     { label: "PYQs", href: "https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD" },
-    { label: "AskDoubt", href: "/ask-doubt" },
+    { label: "Ask Doubt", href: "/ask-doubt" },
   ];
-  
+
+  // ✅ Feature cards on homepage
   const featureCards = [
     { emoji: "📝", title: "Notes", text: "Create and organize your study notes", link: "/notes" },
     { emoji: "🎓", title: "Courses", text: "Learn from comprehensive courses", link: "/courses" },
@@ -20,10 +23,11 @@ function Home() {
     { emoji: "❓", title: "Ask-Doubt", text: "Get help from community", link: "/ask-doubt" },
   ];
 
+  // ✅ Example course section at bottom
   const courseCards = [
     { title: "Intro to Python", tag: "Beginner", info: "8 weeks · 40 lessons", link: "https://www.youtube.com/watch?v=nLRL_NcnK-4" },
     { title: "Web Development", tag: "Core CS", info: "12 weeks · 60 lessons", link: "https://www.youtube.com/watch?v=nu_pCVPKzTk" },
-    { title: "Power Bi", tag: "Business", info: "6 weeks · 30 lessons", link: "https://www.youtube.com/watch?v=FwjaHCVNBWA" },
+    { title: "Power BI", tag: "Business", info: "6 weeks · 30 lessons", link: "https://www.youtube.com/watch?v=FwjaHCVNBWA" },
   ];
 
   return (
@@ -34,10 +38,17 @@ function Home() {
           <span className="logo">📚</span>
           <Link to="/" className="title">StudyHub</Link>
         </div>
+
         <nav className={"nav " + (open ? "open" : "")}>
           {menu.map((m) =>
             m.label === "PYQs" ? (
-              <a key={m.label} href={m.href} target="_blank" rel="noopener noreferrer" className="nav-link">
+              <a
+                key={m.label}
+                href={m.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link"
+              >
                 {m.label}
               </a>
             ) : (
@@ -47,6 +58,7 @@ function Home() {
             )
           )}
         </nav>
+
         <button
           className="btn btn-ghost menu-toggle"
           onClick={() => setOpen(!open)}
@@ -62,8 +74,14 @@ function Home() {
         <div className="hero-content">
           <h1>An Investment In Knowledge Pays The Best Interest</h1>
           <p>
-            Learn smarter with notes, courses, timetable planning, and instant doubt support — all in one place.
+            Learn smarter with notes, courses, timetable planning, and instant doubt support —
+            all in one place.
           </p>
+          <div className="cta">
+            <Link to="/courses" className="btn btn-accent">
+              Explore Courses
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -73,10 +91,17 @@ function Home() {
           <h2>Everything you need to excel in your studies</h2>
           <p>Comprehensive tools and resources for effective learning</p>
         </div>
+
         <div className="strip-cards">
           {featureCards.map((f) =>
             f.title === "PYQs" ? (
-              <a key={f.title} href={f.link} target="_blank" rel="noopener noreferrer" className="card-link">
+              <a
+                key={f.title}
+                href={f.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="card-link"
+              >
                 <div className="card">
                   <div className="icon">{f.emoji}</div>
                   <div className="card-title">{f.title}</div>
@@ -100,15 +125,23 @@ function Home() {
       <section className="section" id="courses">
         <div className="section-head">
           <h3>Popular Courses</h3>
-          <Link className="link" to="/courses">View all →</Link>
+          <Link className="link" to="/courses">
+            View all →
+          </Link>
         </div>
+
         <div className="grid">
           {courseCards.map((c) => (
             <article key={c.title} className="course">
               <div className="course-badge">{c.tag}</div>
               <h4>{c.title}</h4>
               <p>{c.info}</p>
-              <a href={c.link} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+              <a
+                href={c.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+              >
                 Enroll
               </a>
             </article>
@@ -116,6 +149,7 @@ function Home() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer className="footer">
         © {new Date().getFullYear()} StudyHub • Built with React & Node.js
       </footer>
