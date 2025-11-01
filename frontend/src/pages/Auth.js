@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Auth.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
+// ✅ Use your Render backend URL
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,10 +13,12 @@ function Auth() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  // 🔹 Handle input change
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // 🔹 Handle login/register submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -25,7 +29,7 @@ function Auth() {
 
       if (response.data.success) {
         localStorage.setItem("token", response.data.token);
-        navigate("/");
+        navigate("/"); // Go to Home
       } else {
         setError(response.data.message || "Something went wrong.");
       }
@@ -34,10 +38,10 @@ function Auth() {
     }
   };
 
+  // 🔹 Skip login
   const handleSkip = () => {
-    // ✅ Skip login and go to Home
-    localStorage.removeItem("token"); // Ensure no auth token is stored
-    navigate("/");
+    localStorage.removeItem("token"); // Remove any stored token
+    navigate("/"); // Go directly to Home
   };
 
   return (
@@ -47,6 +51,7 @@ function Auth() {
         <h2>{isLogin ? "Login" : "Register"}</h2>
 
         <form onSubmit={handleSubmit}>
+          {/* Show name field only for register */}
           {!isLogin && (
             <input
               type="text"
@@ -57,6 +62,7 @@ function Auth() {
               required
             />
           )}
+
           <input
             type="email"
             name="email"
@@ -65,6 +71,7 @@ function Auth() {
             onChange={handleChange}
             required
           />
+
           <input
             type="password"
             name="password"
