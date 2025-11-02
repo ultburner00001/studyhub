@@ -153,7 +153,7 @@ export default function Notes() {
           <Link to="/" className="btn btn-outline">🏠 Home</Link>
         </div>
       </header>
-
+              </div>
 
           {loading ? (
             <div className="loading">⏳ Loading notes...</div>
