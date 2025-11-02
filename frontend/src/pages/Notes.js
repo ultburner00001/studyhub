@@ -127,20 +127,28 @@ export default function Notes() {
     return clean.length > 60 ? clean.slice(0, 60) + "..." : clean || "Empty note";
   };
 
- return (
+  return (
     <div className="notes-page">
       {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
-      {/* ✅ Navbar (same structure as Timetable.js) */}
+      {/* ✅ Navbar (same as Timetable.js) */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
-          <Link to="/" className="title">StudyHub</Link>
+          <Link to="/" className="title">
+            StudyHub
+          </Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link">Notes</Link>
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/timetable" className="nav-link active">Timetable</Link>
+          <Link to="/notes" className="nav-link active">
+            Notes
+          </Link>
+          <Link to="/courses" className="nav-link">
+            Courses
+          </Link>
+          <Link to="/timetable" className="nav-link">
+            Timetable
+          </Link>
           <a
             href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
             target="_blank"
@@ -149,12 +157,25 @@ export default function Notes() {
           >
             PYQs
           </a>
-          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
+          <Link to="/ask-doubt" className="nav-link">
+            Ask Doubt
+          </Link>
         </nav>
         <div className="actions">
-          <Link to="/" className="btn btn-outline">🏠 Home</Link>
+          <Link to="/" className="btn btn-outline">
+            🏠 Home
+          </Link>
         </div>
       </header>
+
+      {/* ✅ Notes Layout */}
+      <div className="notes-container">
+        <aside className="notes-sidebar">
+          <div className="sidebar-header">
+            <h2>My Notes</h2>
+            <button className="btn btn-primary" onClick={newNote}>
+              + New Note
+            </button>
           </div>
 
           {loading ? (
