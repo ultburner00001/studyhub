@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
-// 🔧 API client
+// 🔧 Axios client setup
 const API_URL =
   (import.meta.env.VITE_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
 
@@ -30,7 +30,7 @@ export default function Notes() {
     setTimeout(() => setNotifications((p) => p.filter((t) => t.id !== id)), 4000);
   };
 
-  // ✅ Fetch notes
+  // ✅ Fetch all notes from backend
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
@@ -52,7 +52,7 @@ export default function Notes() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // ✅ Create new local note
+  // ✅ Create a new blank note
   const createNote = () => {
     const temp = {
       id: `local-${Date.now()}`,
@@ -70,34 +70,31 @@ export default function Notes() {
   const saveNote = async () => {
     if (!currentNote) return;
     const title = currentNote.title?.trim() || "Untitled";
-    const content = editorRef.current?.innerHTML || "";
+    const content = editorRef.current?.innerHTML?.trim() || "";
 
-    if (!content.trim()) {
+    if (!content) {
       showToast("Note content cannot be empty", "warning");
       return;
     }
 
     setSaving(true);
     try {
-      let res;
-      if (currentNote._id) {
-        res = await httpClient.put(`/notes/${currentNote._id}`, { title, content });
-      } else {
-        res = await httpClient.post("/notes", { title, content });
-      }
+      const res = currentNote._id
+        ? await httpClient.put(`/notes/${currentNote._id}`, { title, content })
+        : await httpClient.post("/notes", { title, content });
 
       if (res.data?.success) {
         const saved = res.data.note;
-        setNotes((p) => {
-          const withoutOld = p.filter(
+        setNotes((prev) => {
+          const others = prev.filter(
             (n) => n._id !== saved._id && n.id !== currentNote.id
           );
-          return [saved, ...withoutOld];
+          return [saved, ...others];
         });
         setCurrentNote(saved);
-        showToast("Note saved successfully", "success");
+        showToast("✅ Note saved successfully", "success");
       } else {
-        showToast(res.data?.message || "Failed to save", "error");
+        showToast(res.data?.message || "Failed to save note", "error");
       }
     } catch (err) {
       console.error("Save error:", err);
@@ -114,28 +111,28 @@ export default function Notes() {
     const id = note._id || note.id;
     if (!window.confirm("Delete this note?")) return;
 
-    // local-only note
     if (!note._id) {
-      setNotes((p) => p.filter((n) => n.id !== id));
+      // Local-only note
+      setNotes((prev) => prev.filter((n) => n.id !== id));
       if (currentNote?.id === id) {
         setCurrentNote(null);
         setIsEditing(false);
       }
-      showToast("Local note deleted", "info");
+      showToast("🗑️ Local note deleted", "info");
       return;
     }
 
     try {
       const res = await httpClient.delete(`/notes/${id}`);
       if (res.data?.success) {
-        setNotes((p) => p.filter((n) => n._id !== id));
+        setNotes((prev) => prev.filter((n) => n._id !== id));
         if (currentNote?._id === id) {
           setCurrentNote(null);
           setIsEditing(false);
         }
-        showToast("Note deleted", "success");
+        showToast("🗑️ Note deleted successfully", "success");
       } else {
-        showToast(res.data?.message || "Failed to delete", "error");
+        showToast(res.data?.message || "Failed to delete note", "error");
       }
     } catch (err) {
       console.error("Delete error:", err);
@@ -143,7 +140,7 @@ export default function Notes() {
     }
   };
 
-  // ✅ Open a note
+  // ✅ Open note in editor
   const openNote = (note) => {
     setCurrentNote(note);
     setIsEditing(true);
@@ -152,10 +149,10 @@ export default function Notes() {
         editorRef.current.innerHTML = note.content || "";
         editorRef.current.focus();
       }
-    }, 0);
+    }, 50);
   };
 
-  // ✅ Auto-save to localStorage (fix for white screen & reversed typing)
+  // ✅ Live text update (fix reversed typing + autosave)
   const onEditorInput = () => {
     if (!currentNote) return;
     const content = editorRef.current.innerHTML;
@@ -165,10 +162,10 @@ export default function Notes() {
     saveTimer.current = setTimeout(() => {
       const key = `draft_${currentNote._id || currentNote.id}`;
       localStorage.setItem(key, JSON.stringify({ ...currentNote, content }));
-    }, 1000);
+    }, 500);
   };
 
-  // ✅ Text preview helper
+  // ✅ Strip HTML for preview
   const preview = (html) => {
     const text = html?.replace(/<[^>]+>/g, "") || "";
     return text.length > 80 ? text.slice(0, 80) + "..." : text || "Empty note";
@@ -176,14 +173,14 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* Toasts */}
+      {/* 🔔 Toast Notifications */}
       <div className="toast-container">
         {notifications.map((n) => (
           <div key={n.id} className={`toast ${n.type}`}>{n.msg}</div>
         ))}
       </div>
 
-      {/* Header */}
+      {/* 🔹 Header */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
@@ -197,15 +194,13 @@ export default function Notes() {
         </nav>
       </header>
 
-      {/* Main container */}
+      {/* 🔹 Layout */}
       <div className="notes-container">
         {/* Sidebar */}
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={createNote}>
-              + New Note
-            </button>
+            <button className="btn btn-primary" onClick={createNote}>+ New Note</button>
           </div>
 
           {loading ? (
@@ -226,9 +221,7 @@ export default function Notes() {
                       <div className="note-title">{n.title || "Untitled"}</div>
                       <div className="note-preview">{preview(n.content)}</div>
                     </div>
-                    <button className="btn-delete" onClick={() => deleteNote(n)}>
-                      🗑️
-                    </button>
+                    <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
                   </div>
                 ))
               ) : (
@@ -250,16 +243,14 @@ export default function Notes() {
                 }
                 placeholder="Note title"
               />
-
               <div
                 ref={editorRef}
                 className="note-content-editor"
                 contentEditable
                 suppressContentEditableWarning
                 onInput={onEditorInput}
-                style={{ minHeight: 300, textAlign: "left", direction: "ltr" }}
+                data-placeholder="Start typing your note..."
               />
-
               <div className="editor-actions">
                 <button
                   className="btn btn-outline"
@@ -271,11 +262,7 @@ export default function Notes() {
                 >
                   Cancel
                 </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={saveNote}
-                  disabled={saving}
-                >
+                <button className="btn btn-primary" onClick={saveNote} disabled={saving}>
                   {saving ? "Saving..." : "Save"}
                 </button>
               </div>
@@ -283,10 +270,8 @@ export default function Notes() {
           ) : (
             <div className="editor-placeholder">
               <h3>Select a note or create a new one</h3>
-              <p>Your notes will be autosaved locally and synced online.</p>
-              <button className="btn btn-primary" onClick={createNote}>
-                Create Note
-              </button>
+              <p>Your notes will autosave locally and sync online.</p>
+              <button className="btn btn-primary" onClick={createNote}>Create Note</button>
             </div>
           )}
         </main>
