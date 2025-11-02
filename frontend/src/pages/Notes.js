@@ -131,29 +131,18 @@ export default function Notes() {
     <div className="notes-page">
       {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
-      {/* ✅ Modern Navbar (same as Timetable.js) */}
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo">📘</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
-        </div>
-        <nav className="nav">
-          <Link to="/notes" className="nav-link active">
+      {/* ✅ Navbar (same structure as Timetable.js) */}
+      <nav className="navbar">
+        <div className="logo">📘 StudyHub</div>
+        <div className="nav-links">
+          <Link to="/notes" className="active">
             Notes
           </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link">
-            Timetable
-          </Link>
-          <Link to="/ask-doubt" className="nav-link">
-            Ask Doubt
-          </Link>
-        </nav>
-      </header>
+          <Link to="/courses">Courses</Link>
+          <Link to="/timetable">Timetable</Link>
+          <Link to="/ask-doubt">Ask Doubt</Link>
+        </div>
+      </nav>
 
       <div className="notes-container">
         <aside className="notes-sidebar">
