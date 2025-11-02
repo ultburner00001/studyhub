@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
-const API_URL =
-  const API_URL = (process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
+
+const API_URL = process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
+
 
 
 const http = axios.create({
