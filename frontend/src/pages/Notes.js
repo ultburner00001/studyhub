@@ -12,7 +12,7 @@ const http = axios.create({
   timeout: 15000,
 });
 
-function Notes() {
+export default function Notes() {
   const [notes, setNotes] = useState([]);
   const [activeNote, setActiveNote] = useState(null);
   const [title, setTitle] = useState("");
@@ -45,11 +45,7 @@ function Notes() {
   }, [fetchNotes]);
 
   const newNote = () => {
-    const temp = {
-      id: `local-${Date.now()}`,
-      title: "Untitled Note",
-      content: "",
-    };
+    const temp = { id: `local-${Date.now()}`, title: "Untitled Note", content: "" };
     setNotes((prev) => [temp, ...prev]);
     setActiveNote(temp);
     setTitle(temp.title);
@@ -64,12 +60,8 @@ function Notes() {
 
   const saveNote = async () => {
     if (!activeNote) return;
-
-    const trimmedContent = content.trim();
-    if (!trimmedContent) {
-      notify("Note content cannot be empty", "warning");
-      return;
-    }
+    const trimmed = content.trim();
+    if (!trimmed) return notify("Note content cannot be empty", "warning");
 
     setSaving(true);
     try {
@@ -77,28 +69,26 @@ function Notes() {
       if (activeNote._id) {
         res = await http.put(`/notes/${activeNote._id}`, {
           title: title.trim() || "Untitled",
-          content: trimmedContent,
+          content: trimmed,
         });
       } else {
         res = await http.post("/notes", {
           title: title.trim() || "Untitled",
-          content: trimmedContent,
+          content: trimmed,
         });
       }
 
       if (res.data?.success) {
-        const savedNote = res.data.note;
+        const saved = res.data.note;
         setNotes((prev) => {
           const filtered = prev.filter(
-            (n) => n._id !== savedNote._id && n.id !== activeNote.id
+            (n) => n._id !== saved._id && n.id !== activeNote.id
           );
-          return [savedNote, ...filtered];
+          return [saved, ...filtered];
         });
-        setActiveNote(savedNote);
+        setActiveNote(saved);
         notify("✅ Note saved successfully", "success");
-      } else {
-        notify("Failed to save note", "error");
-      }
+      } else notify("Failed to save note", "error");
     } catch (err) {
       console.error(err);
       notify("Error saving note", "error");
@@ -114,8 +104,7 @@ function Notes() {
     if (!note._id) {
       setNotes((prev) => prev.filter((n) => n.id !== note.id));
       if (activeNote?.id === note.id) setActiveNote(null);
-      notify("🗑️ Local note deleted", "info");
-      return;
+      return notify("🗑️ Local note deleted", "info");
     }
 
     try {
@@ -124,9 +113,7 @@ function Notes() {
         setNotes((prev) => prev.filter((n) => n._id !== note._id));
         if (activeNote?._id === note._id) setActiveNote(null);
         notify("🗑️ Note deleted", "success");
-      } else {
-        notify("Failed to delete note", "error");
-      }
+      } else notify("Failed to delete note", "error");
     } catch (err) {
       console.error(err);
       notify("Server error deleting note", "error");
@@ -170,8 +157,7 @@ function Notes() {
                 <div
                   key={n._id || n.id}
                   className={`note-item ${
-                    activeNote &&
-                    (activeNote._id === n._id || activeNote.id === n.id)
+                    activeNote && (activeNote._id === n._id || activeNote.id === n.id)
                       ? "active"
                       : ""
                   }`}
@@ -180,12 +166,7 @@ function Notes() {
                     <div className="note-title">{n.title}</div>
                     <div className="note-preview">{previewText(n.content)}</div>
                   </div>
-                  <button
-                    className="btn-delete"
-                    onClick={() => deleteNote(n)}
-                  >
-                    🗑️
-                  </button>
+                  <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
                 </div>
               ))}
             </div>
@@ -241,4 +222,3 @@ function Notes() {
   );
 }
 
-export default Notes;
