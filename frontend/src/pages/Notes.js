@@ -30,13 +30,13 @@ export default function Notes() {
     setLoading(true);
     try {
       const res = await http.get("/notes");
-      if (res.data?.success && Array.isArray(res.data.notes)) {
-        setNotes(res.data.notes);
-      } else {
-        setNotes([]);
-      }
+      const fetched =
+        res.data?.notes ||
+        res.data?.data ||
+        (Array.isArray(res.data) ? res.data : []);
+      setNotes(fetched.filter((n) => n && n.title !== undefined));
     } catch (err) {
-      console.error("Fetch notes error:", err);
+      console.error("⚠️ Fetch notes error:", err);
       notify("⚠️ Error loading notes", "error");
       setNotes([]);
     } finally {
@@ -88,19 +88,12 @@ export default function Notes() {
       }
 
       if (res.data?.success) {
-        const saved = res.data.note;
-        setNotes((prev = []) => {
-          const filtered = (Array.isArray(prev) ? prev : []).filter(
-            (n) => n && n._id !== saved?._id && n.id !== activeNote?.id
-          );
-          return [saved, ...filtered];
-        });
-        setActiveNote(saved);
         notify("✅ Note saved successfully!", "success");
-        fetchNotes(); // Refresh from DB
+        setActiveNote(null);
+        await fetchNotes(); // Refresh from DB after save
       } else notify("❌ Could not save note", "error");
     } catch (err) {
-      console.error(err);
+      console.error("⚠️ Server error while saving:", err);
       notify("⚠️ Server error while saving", "error");
     } finally {
       setSaving(false);
@@ -111,22 +104,21 @@ export default function Notes() {
     if (!note) return;
     if (!window.confirm("Delete this note permanently?")) return;
 
-    if (!note._id) {
-      setNotes((prev) => prev.filter((n) => n.id !== note.id));
-      if (activeNote?.id === note.id) setActiveNote(null);
-      return notify("🗑️ Local note deleted", "info");
-    }
-
     try {
-      const res = await http.delete(`/notes/${note._id}`);
-      if (res.data?.success) {
-        setNotes((prev) => prev.filter((n) => n._id !== note._id));
-        if (activeNote?._id === note._id) setActiveNote(null);
-        notify("🗑️ Note deleted", "success");
-        fetchNotes(); // refresh again
-      } else notify("❌ Failed to delete", "error");
+      if (note._id) {
+        const res = await http.delete(`/notes/${note._id}`);
+        if (res.data?.success) {
+          notify("🗑️ Note deleted", "success");
+          await fetchNotes(); // Refresh notes after delete
+        } else notify("❌ Failed to delete", "error");
+      } else {
+        // local unsaved note
+        setNotes((prev) => prev.filter((n) => n.id !== note.id));
+        notify("🗑️ Local note deleted", "info");
+      }
+      setActiveNote(null);
     } catch (err) {
-      console.error(err);
+      console.error("⚠️ Error deleting note:", err);
       notify("⚠️ Error deleting note", "error");
     }
   };
