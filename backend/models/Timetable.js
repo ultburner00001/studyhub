@@ -1,20 +1,20 @@
-// models/Timetable.js
+// backend/models/Timetable.js
 import mongoose from "mongoose";
 
-const timetableSchema = new mongoose.Schema({
-  schedule: [
-    {
-      day: String,
-      slots: [
-        {
-          time: String,
-          subject: String,
-          topic: String,
-          isCompleted: Boolean,
-        },
-      ],
-    },
-  ],
+const SlotSchema = new mongoose.Schema({
+  time: String,
+  subject: String,
+  topic: String,
+  isCompleted: Boolean,
 });
 
-export default mongoose.model("Timetable", timetableSchema);
+const DaySchema = new mongoose.Schema({
+  day: String,
+  slots: [SlotSchema],
+});
+
+const TimetableSchema = new mongoose.Schema({
+  schedule: [DaySchema],
+});
+
+export default mongoose.model("Timetable", TimetableSchema);
