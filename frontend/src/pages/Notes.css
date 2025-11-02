@@ -10,7 +10,7 @@
 
 /* -------- Navbar (Same as Timetable.js) -------- */
 .navbar {
-  background: #2563eb;
+  background: var(--blue-900);
   color: white;
   padding: 14px 32px;
   display: flex;
