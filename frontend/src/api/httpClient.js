@@ -1,93 +1,97 @@
+// src/utils/httpClient.js
 import axios from 'axios';
 
-// 🌐 Use environment variable for backend API
-// Fallback to localhost for local development
-const API_URL = process.env.REACT_APP_API_URL?.replace(/\/+$/, '');
+// 🌐 Determine API Base URL
+// Priority: Environment Variable → Render → Localhost
+const API_URL =
+  process.env.REACT_APP_API_URL?.replace(/\/+$/, '') ||
+  'https://studyhub-21ux.onrender.com' ||
+  'http://localhost:5000';
 
-// Create Axios instance
+console.log('🌍 Using API URL:', API_URL);
+
+// ⚙️ Create Axios instance
 const httpClient = axios.create({
   baseURL: API_URL,
   timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: false, // Set true only if using cookies
 });
 
-// 🛠️ Request Interceptor — add token if available
-httpClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('studyhub_token');
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+// 🧾 Request Interceptor — attach token
+httpClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('studyhub_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('➡️ API Request:', config.method?.toUpperCase(), config.url);
-  }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('➡️ [Request]', config.method?.toUpperCase(), config.url, config.data || '');
+    }
 
-  return config;
-});
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// 🧩 Response Interceptor — handle errors and retry logic
+// 🧩 Response Interceptor — handle common errors & retry logic
 httpClient.interceptors.response.use(
   (response) => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('✅ API Response:', response.status, response.config.url);
+      console.log('✅ [Response]', response.status, response.config.url);
     }
     return response;
   },
   async (error) => {
+    const status = error?.response?.status;
+    let message = 'Unexpected error. Please try again later.';
+
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ API Error:', error);
+      console.error('❌ [API Error]', error);
     }
 
-    const status = error?.response?.status;
-    let errorMessage = 'An unexpected error occurred. Please try again.';
-    let shouldRedirect = false;
+    // ⚠️ Handle CORS & Network
+    if (error.message === 'Network Error') {
+      message = 'Network error. Check your backend or internet connection.';
+    } else if (error.code === 'ECONNABORTED') {
+      message = 'Request timed out. Please retry.';
+    }
 
+    // 🧱 Specific HTTP codes
     switch (status) {
       case 401:
-        errorMessage = 'Your session has expired. Please login again.';
-        shouldRedirect = true;
+        message = 'Unauthorized — Please login again.';
+        localStorage.removeItem('studyhub_token');
+        window.location.href = '/auth';
         break;
       case 403:
-        errorMessage = 'You do not have permission to access this resource.';
-        shouldRedirect = true;
+        message = 'Forbidden — You do not have access.';
+        break;
+      case 404:
+        message = 'Resource not found.';
         break;
       case 500:
-        errorMessage = 'Server error. Please try again later.';
+        message = 'Server error. Please try again later.';
         break;
-      case 503:
-        errorMessage = 'Service temporarily unavailable. Please try again later.';
-        break;
-      default:
-        if (error.code === 'ECONNABORTED') {
-          errorMessage = 'Request timed out. Please check your connection.';
-        } else if (error.message === 'Network Error') {
-          errorMessage = 'Network error. Please check your internet connection.';
-        }
     }
 
-    if (shouldRedirect) {
-      localStorage.removeItem('studyhub_token');
-      sessionStorage.setItem('auth_error', errorMessage);
-      try {
-        window.location.href = '/auth';
-      } catch (e) {
-        // no-op
-      }
-    }
-
-    // 🔁 Retry Logic with exponential backoff
+    // 🔁 Retry (up to 3 times for temporary network issues)
     if (error.message === 'Network Error' && error.config) {
-      const retryCount = error.config._retryCount || 0;
-      if (retryCount < 3) {
-        error.config._retryCount = retryCount + 1;
-        const delay = 1000 * Math.pow(2, retryCount);
+      const retries = error.config._retries || 0;
+      if (retries < 3) {
+        error.config._retries = retries + 1;
+        const delay = 1000 * Math.pow(2, retries);
         await new Promise((resolve) => setTimeout(resolve, delay));
         return httpClient.request(error.config);
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject({ ...error, message });
   }
 );
 
 export default httpClient;
+
