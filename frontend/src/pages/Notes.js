@@ -30,11 +30,13 @@ export default function Notes() {
     setLoading(true);
     try {
       const res = await http.get("/notes");
-      if (res.data?.success) setNotes(res.data.notes);
-      else notify("Failed to load notes", "error");
+      if (res.data?.success && Array.isArray(res.data.notes))
+        setNotes(res.data.notes);
+      else setNotes([]);
     } catch (err) {
       console.error(err);
       notify("Server error while fetching notes", "error");
+      setNotes([]);
     } finally {
       setLoading(false);
     }
@@ -151,7 +153,7 @@ export default function Notes() {
 
           {loading ? (
             <div className="loading">Loading notes...</div>
-          ) : notes.length > 0 ? (
+          ) : Array.isArray(notes) && notes.length > 0 ? (
             <div className="notes-list">
               {notes.map((n) => (
                 <div
@@ -221,4 +223,3 @@ export default function Notes() {
     </div>
   );
 }
-
