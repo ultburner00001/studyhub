@@ -3,18 +3,16 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
-// ✅ Correct environment variable for React
 const API_URL =
   process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
 
-// ✅ Axios instance
 const http = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 15000,
 });
 
-export default function Notes() {
+function Notes() {
   const [notes, setNotes] = useState([]);
   const [activeNote, setActiveNote] = useState(null);
   const [title, setTitle] = useState("");
@@ -23,13 +21,11 @@ export default function Notes() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Toast messages
   const notify = (msg, type = "info") => {
     setMessage({ text: msg, type });
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // ✅ Load notes
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
@@ -48,7 +44,6 @@ export default function Notes() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // ✅ Create new note
   const newNote = () => {
     const temp = {
       id: `local-${Date.now()}`,
@@ -61,14 +56,12 @@ export default function Notes() {
     setContent("");
   };
 
-  // ✅ Open existing note
   const openNote = (note) => {
     setActiveNote(note);
     setTitle(note.title);
     setContent(note.content);
   };
 
-  // ✅ Save or update note
   const saveNote = async () => {
     if (!activeNote) return;
 
@@ -114,7 +107,6 @@ export default function Notes() {
     }
   };
 
-  // ✅ Delete note
   const deleteNote = async (note) => {
     if (!note) return;
     if (!window.confirm("Delete this note?")) return;
@@ -141,7 +133,6 @@ export default function Notes() {
     }
   };
 
-  // ✅ Note preview
   const previewText = (txt) => {
     const clean = txt?.replace(/<[^>]+>/g, "") || "";
     return clean.length > 60 ? clean.slice(0, 60) + "..." : clean || "Empty note";
@@ -151,39 +142,24 @@ export default function Notes() {
     <div className="notes-page">
       {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
-      {/* Header */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📘</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
+          <Link to="/" className="title">StudyHub</Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link active">
-            Notes
-          </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link">
-            Timetable
-          </Link>
-          <Link to="/ask-doubt" className="nav-link">
-            Ask Doubt
-          </Link>
+          <Link to="/notes" className="nav-link active">Notes</Link>
+          <Link to="/courses" className="nav-link">Courses</Link>
+          <Link to="/timetable" className="nav-link">Timetable</Link>
+          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
         </nav>
       </header>
 
-      {/* Layout */}
       <div className="notes-container">
-        {/* Sidebar */}
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={newNote}>
-              + New Note
-            </button>
+            <button className="btn btn-primary" onClick={newNote}>+ New Note</button>
           </div>
 
           {loading ? (
@@ -218,7 +194,6 @@ export default function Notes() {
           )}
         </aside>
 
-        {/* Editor */}
         <main className="notes-editor">
           {activeNote ? (
             <div className="editor-wrap">
@@ -265,3 +240,5 @@ export default function Notes() {
     </div>
   );
 }
+
+export default Notes;
