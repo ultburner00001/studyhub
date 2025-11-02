@@ -1,13 +1,20 @@
+// models/Timetable.js
 import mongoose from "mongoose";
 
-const timetableSchema = new mongoose.Schema(
-  {
-    day: { type: String, required: true, trim: true },
-    subject: { type: String, required: true, trim: true },
-    startTime: { type: String, required: true, trim: true },
-    endTime: { type: String, required: true, trim: true },
-  },
-  { timestamps: true }
-);
+const timetableSchema = new mongoose.Schema({
+  schedule: [
+    {
+      day: String,
+      slots: [
+        {
+          time: String,
+          subject: String,
+          topic: String,
+          isCompleted: Boolean,
+        },
+      ],
+    },
+  ],
+});
 
 export default mongoose.model("Timetable", timetableSchema);
