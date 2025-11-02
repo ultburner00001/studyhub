@@ -14,6 +14,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173", // Local dev
   "http://localhost:3000",
+  "https://studyhub-tan.vercel.app",
   "https://studyhub-21ux.vercel.app", // Your Vercel frontend
   "https://studyhub-git-main-siddharth-amraotkars-projects.vercel.app", // optional preview builds
 ];
