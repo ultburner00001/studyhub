@@ -8,7 +8,7 @@
 }
 
 .topbar {
-  background: #2b59ff;
+  background: var(--blue-900);
   color: #fff;
   padding: 0.8rem 1.5rem;
   display: flex;
