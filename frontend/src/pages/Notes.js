@@ -26,17 +26,28 @@ export default function Notes() {
     setTimeout(() => setMessage(null), 2500);
   };
 
+  // ✅ Fetch Notes - handles multiple possible backend formats
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
       const res = await http.get("/notes");
-      if (res.data?.success && Array.isArray(res.data.notes)) {
-        setNotes(res.data.notes);
+      let fetchedNotes = [];
+
+      if (Array.isArray(res.data)) {
+        fetchedNotes = res.data;
+      } else if (Array.isArray(res.data.notes)) {
+        fetchedNotes = res.data.notes;
+      } else if (Array.isArray(res.data.data)) {
+        fetchedNotes = res.data.data;
+      }
+
+      if (Array.isArray(fetchedNotes)) {
+        setNotes(fetchedNotes.filter((n) => n && typeof n === "object"));
       } else {
         setNotes([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Fetch notes error:", err);
       notify("⚠️ Error loading notes", "error");
       setNotes([]);
     } finally {
@@ -54,16 +65,17 @@ export default function Notes() {
       title: "Untitled Note",
       content: "",
     };
-    setNotes((prev) => [temp, ...prev]);
+    setNotes((prev) => [temp, ...(Array.isArray(prev) ? prev : [])]);
     setActiveNote(temp);
     setTitle(temp.title);
     setContent("");
   };
 
   const openNote = (note) => {
+    if (!note) return;
     setActiveNote(note);
-    setTitle(note.title);
-    setContent(note.content);
+    setTitle(note.title || "");
+    setContent(note.content || "");
   };
 
   const saveNote = async () => {
@@ -86,25 +98,22 @@ export default function Notes() {
         });
       }
 
-      if (res.data?.success) {
-        const saved = res.data.note;
+      const saved = res.data?.note || res.data?.data || res.data;
+      if (saved && typeof saved === "object") {
         setNotes((prev = []) => {
-  if (!Array.isArray(prev)) return [saved];
-
-  const filtered = prev.filter(
-    (n) =>
-      n &&
-      (n._id !== saved?._id) &&
-      (n.id !== activeNote?.id)
-  );
-
-  return [saved, ...filtered];
-});
+          const arr = Array.isArray(prev) ? prev : [];
+          const filtered = arr.filter(
+            (n) => n && n._id !== saved?._id && n.id !== activeNote?.id
+          );
+          return [saved, ...filtered];
+        });
         setActiveNote(saved);
         notify("✅ Note saved successfully!", "success");
-      } else notify("❌ Could not save note", "error");
+      } else {
+        notify("❌ Could not save note", "error");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Save note error:", err);
       notify("⚠️ Server error while saving", "error");
     } finally {
       setSaving(false);
@@ -116,7 +125,9 @@ export default function Notes() {
     if (!window.confirm("Delete this note permanently?")) return;
 
     if (!note._id) {
-      setNotes((prev) => prev.filter((n) => n.id !== note.id));
+      setNotes((prev) =>
+        (Array.isArray(prev) ? prev : []).filter((n) => n.id !== note.id)
+      );
       if (activeNote?.id === note.id) setActiveNote(null);
       return notify("🗑️ Local note deleted", "info");
     }
@@ -124,12 +135,14 @@ export default function Notes() {
     try {
       const res = await http.delete(`/notes/${note._id}`);
       if (res.data?.success) {
-        setNotes((prev) => prev.filter((n) => n._id !== note._id));
+        setNotes((prev) =>
+          (Array.isArray(prev) ? prev : []).filter((n) => n._id !== note._id)
+        );
         if (activeNote?._id === note._id) setActiveNote(null);
         notify("🗑️ Note deleted", "success");
       } else notify("❌ Failed to delete", "error");
     } catch (err) {
-      console.error(err);
+      console.error("Delete note error:", err);
       notify("⚠️ Error deleting note", "error");
     }
   };
@@ -179,29 +192,33 @@ export default function Notes() {
             <div className="loading">⏳ Loading notes...</div>
           ) : Array.isArray(notes) && notes.length > 0 ? (
             <div className="notes-list">
-              {notes.map((n) => (
-                <div
-                  key={n._id || n.id}
-                  className={`note-item ${
-                    activeNote &&
-                    (activeNote._id === n._id || activeNote.id === n.id)
-                      ? "active"
-                      : ""
-                  }`}
-                >
-                  <div onClick={() => openNote(n)} className="note-main">
-                    <div className="note-title">{n.title}</div>
-                    <div className="note-preview">{previewText(n.content)}</div>
-                  </div>
-                  <button
-                    className="btn-delete"
-                    title="Delete"
-                    onClick={() => deleteNote(n)}
+              {notes
+                .filter((n) => n && (n.title || n.content))
+                .map((n) => (
+                  <div
+                    key={n._id || n.id}
+                    className={`note-item ${
+                      activeNote &&
+                      (activeNote._id === n._id || activeNote.id === n.id)
+                        ? "active"
+                        : ""
+                    }`}
                   >
-                    🗑️
-                  </button>
-                </div>
-              ))}
+                    <div onClick={() => openNote(n)} className="note-main">
+                      <div className="note-title">{n.title || "Untitled"}</div>
+                      <div className="note-preview">
+                        {previewText(n.content)}
+                      </div>
+                    </div>
+                    <button
+                      className="btn-delete"
+                      title="Delete"
+                      onClick={() => deleteNote(n)}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
             </div>
           ) : (
             <div className="empty">📭 No notes yet. Create one!</div>
