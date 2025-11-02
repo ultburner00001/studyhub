@@ -127,9 +127,11 @@ export default function Notes() {
     return clean.length > 60 ? clean.slice(0, 60) + "..." : clean || "Empty note";
   };
 
-  return (
-    <div className="Notes-page">
-      {/* ✅ Navbar */}
+ return (
+    <div className="notes-page">
+      {message && <div className={`toast ${message.type}`}>{message.text}</div>}
+
+      {/* ✅ Navbar (same structure as Timetable.js) */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
@@ -153,7 +155,7 @@ export default function Notes() {
           <Link to="/" className="btn btn-outline">🏠 Home</Link>
         </div>
       </header>
-              </div>
+          </div>
 
           {loading ? (
             <div className="loading">⏳ Loading notes...</div>
