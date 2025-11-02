@@ -14,9 +14,8 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173", // Local dev
   "http://localhost:3000",
-  "https://studyhub-5gij.vercel.app",
-  "https://studyhub-21ux.vercel.app", // Your Vercel frontend
-  "https://studyhub-61ru5i7yh-mehul-swamis-projects.vercel.app", // optional preview builds
+  "https://studyhub-5gij.vercel.app", // Your Vercel frontend
+  "https://studyhub-5gij-7go5rjaok-mehul-swamis-projects.vercel.app", // optional preview builds
 ];
 
 // ✅ CORS Middleware
