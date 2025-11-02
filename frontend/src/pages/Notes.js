@@ -90,7 +90,7 @@ export default function Notes() {
       if (res.data?.success) {
         notify("✅ Note saved successfully!", "success");
         setActiveNote(null);
-        await fetchNotes(); // Refresh from DB after save
+        await fetchNotes();
       } else notify("❌ Could not save note", "error");
     } catch (err) {
       console.error("⚠️ Server error while saving:", err);
@@ -109,10 +109,9 @@ export default function Notes() {
         const res = await http.delete(`/notes/${note._id}`);
         if (res.data?.success) {
           notify("🗑️ Note deleted", "success");
-          await fetchNotes(); // Refresh notes after delete
+          await fetchNotes();
         } else notify("❌ Failed to delete", "error");
       } else {
-        // local unsaved note
         setNotes((prev) => prev.filter((n) => n.id !== note.id));
         notify("🗑️ Local note deleted", "info");
       }
@@ -132,6 +131,7 @@ export default function Notes() {
     <div className="notes-page">
       {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
+      {/* ✅ Modern Navbar (same as Timetable.js) */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📘</span>
