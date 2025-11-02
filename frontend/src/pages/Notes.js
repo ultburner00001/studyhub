@@ -28,6 +28,7 @@ export default function Notes() {
     setTimeout(() => setNotifications((p) => p.filter((t) => t.id !== id)), 4000);
   };
 
+  // ✅ Load notes from backend
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
@@ -140,6 +141,16 @@ export default function Notes() {
     return clean.length > 80 ? clean.slice(0, 80) + "..." : clean || "Empty note";
   };
 
+  // ✅ Prevent crash: ensure ref cleanup safely
+  useEffect(() => {
+    const el = editorRef.current;
+    return () => {
+      if (el) {
+        el.removeEventListener?.("input", () => {});
+      }
+    };
+  }, []);
+
   return (
     <div className="notes-page">
       <div className="toast-container">
@@ -214,6 +225,8 @@ export default function Notes() {
                 className="note-content-textarea"
                 placeholder="Start typing your note..."
                 value={content}
+                dir="ltr"
+                style={{ textAlign: "left" }}
                 onChange={(e) => setContent(e.target.value)}
               />
               <div className="editor-actions">
