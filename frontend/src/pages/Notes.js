@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
@@ -6,7 +6,7 @@ import "./Notes.css";
 const API_URL =
   (import.meta.env.VITE_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
 
-const httpClient = axios.create({
+const http = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 15000,
@@ -14,31 +14,29 @@ const httpClient = axios.create({
 
 export default function Notes() {
   const [notes, setNotes] = useState([]);
-  const [currentNote, setCurrentNote] = useState(null);
+  const [activeNote, setActiveNote] = useState(null);
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [message, setMessage] = useState(null);
 
-  const editorRef = useRef(null);
-
-  const showToast = (msg, type = "info") => {
-    const id = Date.now();
-    setNotifications((p) => [...p, { id, msg, type }]);
-    setTimeout(() => setNotifications((p) => p.filter((t) => t.id !== id)), 3000);
+  // Show small message box for feedback
+  const notify = (msg, type = "info") => {
+    setMessage({ text: msg, type });
+    setTimeout(() => setMessage(null), 3000);
   };
 
   // ✅ Load notes
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await httpClient.get("/notes");
-      if (res.data?.success) setNotes(res.data.notes || []);
-      else showToast("Failed to load notes", "error");
+      const res = await http.get("/notes");
+      if (res.data?.success) setNotes(res.data.notes);
+      else notify("Failed to load notes", "error");
     } catch (err) {
       console.error(err);
-      showToast("Server error while fetching notes", "error");
+      notify("Server error while fetching notes", "error");
     } finally {
       setLoading(false);
     }
@@ -48,56 +46,67 @@ export default function Notes() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // ✅ Create new note
-  const createNote = () => {
+  // ✅ Create a new note
+  const newNote = () => {
     const temp = {
       id: `local-${Date.now()}`,
-      title: "Untitled",
+      title: "Untitled Note",
       content: "",
     };
-    setNotes((p) => [temp, ...p]);
-    setCurrentNote(temp);
+    setNotes((prev) => [temp, ...prev]);
+    setActiveNote(temp);
+    setTitle(temp.title);
     setContent("");
-    setIsEditing(true);
   };
 
-  // ✅ Open existing note
+  // ✅ Open an existing note
   const openNote = (note) => {
-    setCurrentNote(note);
-    setContent(note.content || "");
-    setIsEditing(true);
+    setActiveNote(note);
+    setTitle(note.title);
+    setContent(note.content);
   };
 
-  // ✅ Save note
+  // ✅ Save or update note
   const saveNote = async () => {
-    if (!currentNote) return;
-    const title = currentNote.title?.trim() || "Untitled";
-    const trimmed = content.trim();
+    if (!activeNote) return;
 
-    if (!trimmed) {
-      showToast("Note content cannot be empty", "warning");
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      notify("Note content cannot be empty", "warning");
       return;
     }
 
     setSaving(true);
     try {
-      const res = currentNote._id
-        ? await httpClient.put(`/notes/${currentNote._id}`, { title, content: trimmed })
-        : await httpClient.post("/notes", { title, content: trimmed });
+      let res;
+      if (activeNote._id) {
+        res = await http.put(`/notes/${activeNote._id}`, {
+          title: title.trim() || "Untitled",
+          content: trimmedContent,
+        });
+      } else {
+        res = await http.post("/notes", {
+          title: title.trim() || "Untitled",
+          content: trimmedContent,
+        });
+      }
 
       if (res.data?.success) {
-        const saved = res.data.note;
+        const savedNote = res.data.note;
         setNotes((prev) => {
-          const others = prev.filter((n) => n._id !== saved._id && n.id !== currentNote.id);
-          return [saved, ...others];
+          const filtered = prev.filter(
+            (n) => n._id !== savedNote._id && n.id !== activeNote.id
+          );
+          return [savedNote, ...filtered];
         });
-        setCurrentNote(saved);
-        setIsEditing(false);
-        showToast("✅ Note saved", "success");
-      } else showToast("Failed to save", "error");
+        setActiveNote(savedNote);
+        notify("✅ Note saved successfully", "success");
+      } else {
+        notify("Failed to save note", "error");
+      }
     } catch (err) {
       console.error(err);
-      showToast("Error saving note", "error");
+      notify("Error saving note", "error");
     } finally {
       setSaving(false);
     }
@@ -108,51 +117,49 @@ export default function Notes() {
     if (!note) return;
     if (!window.confirm("Delete this note?")) return;
 
-    const id = note._id || note.id;
+    // Local note deletion
     if (!note._id) {
-      setNotes((prev) => prev.filter((n) => n.id !== id));
-      if (currentNote?.id === id) {
-        setCurrentNote(null);
-        setIsEditing(false);
+      setNotes((prev) => prev.filter((n) => n.id !== note.id));
+      if (activeNote?.id === note.id) {
+        setActiveNote(null);
       }
-      showToast("🗑️ Local note deleted", "info");
+      notify("🗑️ Local note deleted", "info");
       return;
     }
 
+    // Backend note deletion
     try {
-      const res = await httpClient.delete(`/notes/${id}`);
+      const res = await http.delete(`/notes/${note._id}`);
       if (res.data?.success) {
-        setNotes((prev) => prev.filter((n) => n._id !== id));
-        if (currentNote?._id === id) {
-          setCurrentNote(null);
-          setIsEditing(false);
-        }
-        showToast("🗑️ Note deleted", "success");
-      } else showToast("Delete failed", "error");
+        setNotes((prev) => prev.filter((n) => n._id !== note._id));
+        if (activeNote?._id === note._id) setActiveNote(null);
+        notify("🗑️ Note deleted", "success");
+      } else notify("Failed to delete note", "error");
     } catch (err) {
       console.error(err);
-      showToast("Error deleting note", "error");
+      notify("Server error deleting note", "error");
     }
   };
 
-  const preview = (text) => {
-    const clean = text?.replace(/<[^>]+>/g, "") || "";
-    return clean.length > 80 ? clean.slice(0, 80) + "..." : clean || "Empty note";
+  // ✅ Preview for sidebar
+  const previewText = (txt) => {
+    const clean = txt?.replace(/<[^>]+>/g, "") || "";
+    return clean.length > 60 ? clean.slice(0, 60) + "..." : clean || "Empty note";
   };
 
   return (
     <div className="notes-page">
-      {/* Toasts */}
-      <div className="toast-container">
-        {notifications.map((n) => (
-          <div key={n.id} className={`toast ${n.type}`}>{n.msg}</div>
-        ))}
-      </div>
+      {/* Toast / Message */}
+      {message && (
+        <div className={`toast ${message.type}`}>
+          {message.text}
+        </div>
+      )}
 
-      {/* Header */}
+      {/* Topbar */}
       <header className="topbar">
         <div className="brand">
-          <span className="logo">📚</span>
+          <span className="logo">📘</span>
           <Link to="/" className="title">StudyHub</Link>
         </div>
         <nav className="nav">
@@ -169,58 +176,56 @@ export default function Notes() {
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={createNote}>+ New Note</button>
+            <button className="btn btn-primary" onClick={newNote}>+ New Note</button>
           </div>
+
           {loading ? (
-            <div className="loading">Loading...</div>
+            <div className="loading">Loading notes...</div>
           ) : notes.length > 0 ? (
             <div className="notes-list">
               {notes.map((n) => (
                 <div
                   key={n._id || n.id}
-                  className={`note-item ${currentNote && (currentNote._id === n._id || currentNote.id === n.id) ? "active" : ""}`}
+                  className={`note-item ${
+                    activeNote && (activeNote._id === n._id || activeNote.id === n.id)
+                      ? "active"
+                      : ""
+                  }`}
                 >
                   <div onClick={() => openNote(n)} className="note-main">
                     <div className="note-title">{n.title}</div>
-                    <div className="note-preview">{preview(n.content)}</div>
+                    <div className="note-preview">{previewText(n.content)}</div>
                   </div>
                   <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="empty">No notes yet — create one!</div>
+            <div className="empty">No notes found. Create one!</div>
           )}
         </aside>
 
         {/* Editor */}
         <main className="notes-editor">
-          {isEditing && currentNote ? (
+          {activeNote ? (
             <div className="editor-wrap">
               <input
+                type="text"
                 className="note-title-input"
-                value={currentNote.title}
-                onChange={(e) =>
-                  setCurrentNote((p) => ({ ...p, title: e.target.value }))
-                }
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="Note title"
               />
               <textarea
-                ref={editorRef}
                 className="note-content-textarea"
-                placeholder="Start typing your note..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                dir="ltr"
-                style={{ textAlign: "left" }}
+                placeholder="Start typing your note..."
               />
               <div className="editor-actions">
                 <button
                   className="btn btn-outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setCurrentNote(null);
-                  }}
+                  onClick={() => setActiveNote(null)}
                   disabled={saving}
                 >
                   Cancel
@@ -236,8 +241,10 @@ export default function Notes() {
             </div>
           ) : (
             <div className="editor-placeholder">
-              <h3>Select a note or create a new one</h3>
-              <button className="btn btn-primary" onClick={createNote}>Create Note</button>
+              <h3>Select or create a note</h3>
+              <button className="btn btn-primary" onClick={newNote}>
+                Create Note
+              </button>
             </div>
           )}
         </main>
