@@ -1,254 +1,151 @@
-/* -------- General Page Layout -------- */
-.notes-page {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: #f9fafb;
-  color: #222;
-  font-family: "Inter", sans-serif;
-}
-
-/* -------- Navbar (Same as Timetable.js) -------- */
-.navbar {
-  background: #2563eb;
-  color: white;
-  padding: 14px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.navbar .logo {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.navbar .nav-links {
-  display: flex;
-  gap: 24px;
-}
-
-.navbar .nav-links a {
-  color: #e0e7ff;
-  text-decoration: none;
-  font-weight: 500;
-  transition: 0.2s ease;
-}
-
-.navbar .nav-links a:hover {
-  color: white;
-  border-bottom: 2px solid white;
-}
-
-/* -------- Main Notes Layout -------- */
 .notes-container {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* -------- Sidebar -------- */
-.notes-sidebar {
-  width: 280px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  padding: 16px;
+  min-height: 100vh;
+  background: #f5f7fb;
   display: flex;
   flex-direction: column;
+  color: #222;
 }
 
-.sidebar-header {
+/* ✅ Navbar Styling (same as Timetable.js) */
+.topbar {
+  background: white;
+  padding: 1rem 2rem;
+  border-bottom: 2px solid #e4e6ef;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
 }
 
-.sidebar-header h2 {
-  font-size: 18px;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand .title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #222;
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-link {
+  color: #666;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #0056ff;
   font-weight: 600;
-  color: #111827;
+}
+
+.actions .btn-outline {
+  border: 1px solid #ccc;
+  background: transparent;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+}
+
+.actions .btn-outline:hover {
+  background: #eee;
+}
+
+/* ✅ Notes Section */
+.notes-wrapper {
+  width: 80%;
+  max-width: 900px;
+  margin: 2rem auto;
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.note-input {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-bottom: 2rem;
+}
+
+.note-input input,
+.note-input textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
 
 .btn {
   border: none;
-  outline: none;
   border-radius: 8px;
+  padding: 0.5rem 0.9rem;
   cursor: pointer;
-  padding: 8px 14px;
-  font-weight: 500;
-  transition: all 0.2s ease-in-out;
 }
 
-.btn-primary {
-  background: #2563eb;
+.btn.primary {
+  background: #0056ff;
   color: white;
 }
 
-.btn-primary:hover {
-  background: #1d4ed8;
+.btn.success {
+  background: #0bbf7d;
+  color: white;
 }
 
-.btn-outline {
-  background: #f3f4f6;
-  color: #111;
+.btn.secondary {
+  background: #ccc;
+  color: #222;
 }
 
-.btn-outline:hover {
-  background: #e5e7eb;
+.btn.delete {
+  background: #ff4d4f;
+  color: white;
 }
 
-/* -------- Notes List -------- */
-.notes-list {
-  flex: 1;
-  overflow-y: auto;
+.btn.edit {
+  background: #ffa500;
+  color: white;
 }
 
-.note-item {
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.note-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.note-actions {
+  margin-top: 1rem;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  background: #f9fafb;
-  padding: 10px;
-  border-radius: 10px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: 0.2s ease-in-out;
 }
 
-.note-item:hover {
-  background: #eef2ff;
-}
-
-.note-item.active {
-  background: #dbeafe;
-  border-left: 4px solid #2563eb;
-}
-
-.note-title {
-  font-weight: 600;
-  color: #111827;
-}
-
-.note-preview {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.btn-delete {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: #ef4444;
-  transition: 0.2s;
-}
-
-.btn-delete:hover {
-  transform: scale(1.1);
-}
-
-/* -------- Editor -------- */
-.notes-editor {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: #f9fafb;
-  padding: 24px;
-}
-
-.editor-wrap {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.note-title-input {
-  font-size: 18px;
-  font-weight: 600;
-  padding: 10px;
-  border: none;
-  border-bottom: 2px solid #e5e7eb;
-  margin-bottom: 16px;
-  outline: none;
-  background: transparent;
-}
-
-.note-content-textarea {
-  flex: 1;
-  padding: 12px;
-  font-size: 15px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  resize: none;
-  outline: none;
-  background: white;
-}
-
-.editor-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-/* -------- Placeholder -------- */
-.editor-placeholder {
+.no-notes {
   text-align: center;
-  margin-top: 120px;
-  color: #6b7280;
+  color: #777;
 }
-
-.editor-placeholder button {
-  margin-top: 12px;
-}
-
-/* -------- Toast Message -------- */
-.toast {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  background: #2563eb;
-  color: white;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-weight: 500;
-  animation: fadeInOut 2.5s ease;
-  z-index: 1000;
-}
-
-.toast.success {
-  background: #22c55e;
-}
-
-.toast.error {
-  background: #ef4444;
-}
-
-.toast.warning {
-  background: #f59e0b;
-}
-
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(-10px); }
-  10%, 90% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-10px); }
-}
-
-/* -------- Scrollbar -------- */
-.notes-list::-webkit-scrollbar,
-.note-content-textarea::-webkit-scrollbar {
-  width: 6px;
-}
-.notes-list::-webkit-scrollbar-thumb,
-.note-content-textarea::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-.notes-list::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
