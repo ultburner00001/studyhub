@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
-// ✅ Axios setup
 const API_URL =
   (import.meta.env.VITE_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
 
@@ -23,14 +22,12 @@ export default function Notes() {
   const editorRef = useRef(null);
   const saveTimer = useRef(null);
 
-  // ✅ Toast system
   const showToast = (msg, type = "info") => {
     const id = Date.now();
     setNotifications((p) => [...p, { id, msg, type }]);
     setTimeout(() => setNotifications((p) => p.filter((t) => t.id !== id)), 4000);
   };
 
-  // ✅ Fetch notes
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
@@ -52,7 +49,6 @@ export default function Notes() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // ✅ Create a new note
   const createNote = () => {
     const temp = {
       id: `local-${Date.now()}`,
@@ -66,11 +62,10 @@ export default function Notes() {
     setTimeout(() => editorRef.current?.focus(), 100);
   };
 
-  // ✅ Save note (create/update)
   const saveNote = async () => {
     if (!currentNote) return;
     const title = currentNote.title?.trim() || "Untitled";
-    const content = editorRef.current?.innerHTML?.trim() || "";
+    const content = editorRef.current?.innerText?.trim() || "";
 
     if (!content) {
       showToast("Note content cannot be empty", "warning");
@@ -101,17 +96,19 @@ export default function Notes() {
       showToast("Error saving note", "error");
     } finally {
       setSaving(false);
-      setIsEditing(false);
+      // 🔧 Don't immediately null currentNote — prevents white screen
+      setTimeout(() => {
+        setIsEditing(false);
+        setCurrentNote(null);
+      }, 300);
     }
   };
 
-  // ✅ Delete note
   const deleteNote = async (note) => {
     if (!note) return;
     const id = note._id || note.id;
     if (!window.confirm("Delete this note?")) return;
 
-    // local-only delete
     if (!note._id) {
       setNotes((prev) => prev.filter((n) => n.id !== id));
       if (currentNote?.id === id) {
@@ -140,55 +137,54 @@ export default function Notes() {
     }
   };
 
-  // ✅ Open note
   const openNote = (note) => {
     setCurrentNote(note);
     setIsEditing(true);
     setTimeout(() => {
       if (editorRef.current) {
-        editorRef.current.innerHTML = note.content || "";
+        editorRef.current.innerText = note.content || "";
         editorRef.current.focus();
       }
     }, 100);
   };
 
-  // ✅ Handle typing + autosave (fixed reversed input + null crash)
+  // ✅ Fix reversed typing — don't cause re-renders on every keystroke
   const onEditorInput = () => {
-    if (!editorRef.current || !currentNote) return;
+    if (!currentNote || !editorRef.current) return;
 
-    const content = editorRef.current.innerHTML || "";
-    setCurrentNote((prev) => ({ ...prev, content }));
+    const content = editorRef.current.innerText;
+    // Update note content in ref, not state → avoids React render loop
+    currentNote.content = content;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      try {
-        const key = `draft_${currentNote._id || currentNote.id}`;
-        localStorage.setItem(key, JSON.stringify({ ...currentNote, content }));
-      } catch (err) {
-        console.warn("Draft save failed:", err);
-      }
-    }, 600);
+      const key = `draft_${currentNote._id || currentNote.id}`;
+      localStorage.setItem(key, JSON.stringify({ ...currentNote, content }));
+    }, 800);
   };
 
-  // ✅ Clean up timers when unmounting
   useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.addEventListener("input", onEditorInput);
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (el) el.removeEventListener("input", onEditorInput);
     };
-  }, []);
+  }, [currentNote]);
 
-  // ✅ Text preview
-  const preview = (html) => {
-    const text = html?.replace(/<[^>]+>/g, "") || "";
-    return text.length > 80 ? text.slice(0, 80) + "..." : text || "Empty note";
+  const preview = (text) => {
+    const clean = text?.replace(/<[^>]+>/g, "") || "";
+    return clean.length > 80 ? clean.slice(0, 80) + "..." : clean || "Empty note";
   };
 
   return (
     <div className="notes-page">
-      {/* 🔔 Toasts */}
+      {/* 🔔 Toast Notifications */}
       <div className="toast-container">
         {notifications.map((n) => (
-          <div key={n.id} className={`toast ${n.type}`}>{n.msg}</div>
+          <div key={n.id} className={`toast ${n.type}`}>
+            {n.msg}
+          </div>
         ))}
       </div>
 
@@ -196,13 +192,23 @@ export default function Notes() {
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
-          <Link to="/" className="title">StudyHub</Link>
+          <Link to="/" className="title">
+            StudyHub
+          </Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link active">Notes</Link>
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/timetable" className="nav-link">Timetable</Link>
-          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
+          <Link to="/notes" className="nav-link active">
+            Notes
+          </Link>
+          <Link to="/courses" className="nav-link">
+            Courses
+          </Link>
+          <Link to="/timetable" className="nav-link">
+            Timetable
+          </Link>
+          <Link to="/ask-doubt" className="nav-link">
+            Ask Doubt
+          </Link>
         </nav>
       </header>
 
@@ -212,7 +218,9 @@ export default function Notes() {
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={createNote}>+ New Note</button>
+            <button className="btn btn-primary" onClick={createNote}>
+              + New Note
+            </button>
           </div>
 
           {loading ? (
@@ -224,7 +232,8 @@ export default function Notes() {
                   <div
                     key={n._id || n.id}
                     className={`note-item ${
-                      currentNote && (currentNote._id === n._id || currentNote.id === n.id)
+                      currentNote &&
+                      (currentNote._id === n._id || currentNote.id === n.id)
                         ? "active"
                         : ""
                     }`}
@@ -233,7 +242,12 @@ export default function Notes() {
                       <div className="note-title">{n.title || "Untitled"}</div>
                       <div className="note-preview">{preview(n.content)}</div>
                     </div>
-                    <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
+                    <button
+                      className="btn-delete"
+                      onClick={() => deleteNote(n)}
+                    >
+                      🗑️
+                    </button>
                   </div>
                 ))
               ) : (
@@ -260,9 +274,7 @@ export default function Notes() {
                 className="note-content-editor"
                 contentEditable
                 suppressContentEditableWarning
-                onInput={onEditorInput}
                 data-placeholder="Start typing your note..."
-                style={{ minHeight: 300 }}
               />
               <div className="editor-actions">
                 <button
@@ -275,7 +287,11 @@ export default function Notes() {
                 >
                   Cancel
                 </button>
-                <button className="btn btn-primary" onClick={saveNote} disabled={saving}>
+                <button
+                  className="btn btn-primary"
+                  onClick={saveNote}
+                  disabled={saving}
+                >
                   {saving ? "Saving..." : "Save"}
                 </button>
               </div>
@@ -284,7 +300,9 @@ export default function Notes() {
             <div className="editor-placeholder">
               <h3>Select a note or create a new one</h3>
               <p>Your notes will autosave locally and sync online.</p>
-              <button className="btn btn-primary" onClick={createNote}>Create Note</button>
+              <button className="btn btn-primary" onClick={createNote}>
+                Create Note
+              </button>
             </div>
           )}
         </main>
