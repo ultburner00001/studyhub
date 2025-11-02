@@ -1,15 +1,18 @@
+// 📁 src/pages/AskDoubt.js
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import "./AskDoubt.css";
 
-// ✅ Use your Render backend URL here:
-const API_BASE = "https://studyhub-backend.onrender.com/api"; 
-// (change to your actual Render backend link)
+const API_BASE = "https://studyhub-21ux.onrender.com/api"; // ✅ Your Render backend
 
 function AskDoubt() {
   const [doubts, setDoubts] = useState([]);
-  const [newDoubt, setNewDoubt] = useState({ question: "", description: "", tags: [] });
+  const [newDoubt, setNewDoubt] = useState({
+    question: "",
+    description: "",
+    tags: [],
+  });
   const [selectedTags, setSelectedTags] = useState([]);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
@@ -31,15 +34,19 @@ function AskDoubt() {
     "css",
   ];
 
-  // ✅ Fetch all doubts
+  // ✅ Fetch doubts from backend
   const fetchDoubts = async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/doubts`);
-      if (res.data.success) setDoubts(res.data.data || []);
+      if (res.data && res.data.success) {
+        setDoubts(res.data.data || []);
+      } else if (Array.isArray(res.data)) {
+        setDoubts(res.data);
+      }
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch doubts.");
+      setError("Failed to load doubts.");
     } finally {
       setLoading(false);
     }
@@ -49,32 +56,33 @@ function AskDoubt() {
     fetchDoubts();
   }, []);
 
-  // ✅ Submit new doubt
+  // ✅ Post new doubt
   const handleSubmitDoubt = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
-
     if (!newDoubt.question.trim()) {
-      setError("Question is required.");
+      setError("Question cannot be empty");
       return;
     }
 
     setSubmitLoading(true);
+    setError("");
+    setMessage("");
+
     try {
       const res = await axios.post(`${API_BASE}/doubts`, {
         name: "Guest User",
         question: newDoubt.question,
+        description: newDoubt.description,
         subject: selectedTags.join(", "),
       });
 
-      if (res.data.success) {
-        setMessage("Question posted successfully!");
+      if (res.data && (res.data.success || res.status === 201)) {
+        setMessage("✅ Question posted successfully!");
         setNewDoubt({ question: "", description: "", tags: [] });
         setSelectedTags([]);
         fetchDoubts();
       } else {
-        setError("Failed to post question.");
+        setError("Failed to post question");
       }
     } catch (err) {
       console.error(err);
@@ -84,16 +92,21 @@ function AskDoubt() {
     }
   };
 
-  // ✅ Add answer
+  // ✅ Post answer
   const handleSubmitAnswer = async (id) => {
-    if (!answers[id]?.trim()) return;
+    const answerText = answers[id];
+    if (!answerText?.trim()) return;
+
     try {
-      await axios.post(`${API_BASE}/doubts/${id}/answers`, {
-        text: answers[id],
+      const res = await axios.post(`${API_BASE}/doubts/${id}/answers`, {
+        text: answerText,
         author: { name: "Guest User" },
       });
-      setAnswers((prev) => ({ ...prev, [id]: "" }));
-      fetchDoubts();
+
+      if (res.data && (res.data.success || res.status === 201)) {
+        setAnswers((prev) => ({ ...prev, [id]: "" }));
+        fetchDoubts();
+      }
     } catch (err) {
       console.error("Error adding answer:", err);
       alert("Failed to post answer");
@@ -102,12 +115,15 @@ function AskDoubt() {
 
   const toggleTag = (tag) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag)
+        ? prev.filter((t) => t !== tag)
+        : [...prev, tag]
     );
   };
 
   return (
     <div className="ask-doubt-page">
+      {/* ✅ Navbar */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
@@ -129,8 +145,14 @@ function AskDoubt() {
             Ask Doubt
           </Link>
         </nav>
+        <div className="actions">
+          <Link to="/" className="btn btn-outline">
+            🏠 Home
+          </Link>
+        </div>
       </header>
 
+      {/* ✅ Main Section */}
       <div className="doubt-container">
         <h1>Ask a Question</h1>
 
@@ -142,12 +164,16 @@ function AskDoubt() {
             type="text"
             placeholder="Enter your question"
             value={newDoubt.question}
-            onChange={(e) => setNewDoubt({ ...newDoubt, question: e.target.value })}
+            onChange={(e) =>
+              setNewDoubt({ ...newDoubt, question: e.target.value })
+            }
           />
           <textarea
             placeholder="Add description (optional)"
             value={newDoubt.description}
-            onChange={(e) => setNewDoubt({ ...newDoubt, description: e.target.value })}
+            onChange={(e) =>
+              setNewDoubt({ ...newDoubt, description: e.target.value })
+            }
           ></textarea>
 
           <div className="tags-container">
@@ -155,7 +181,9 @@ function AskDoubt() {
               <button
                 type="button"
                 key={tag}
-                className={`tag ${selectedTags.includes(tag) ? "selected" : ""}`}
+                className={`tag ${
+                  selectedTags.includes(tag) ? "selected" : ""
+                }`}
                 onClick={() => toggleTag(tag)}
               >
                 {tag}
@@ -177,14 +205,18 @@ function AskDoubt() {
           doubts.map((d) => (
             <div key={d._id} className="doubt-card">
               <h3>{d.question}</h3>
-              <p>Subject: {d.subject || "N/A"}</p>
+              {d.description && <p>{d.description}</p>}
+              <p>
+                <strong>Tags:</strong> {d.subject || "—"}
+              </p>
 
               <div className="answers-section">
                 <h4>Answers</h4>
                 {(d.answers || []).length > 0 ? (
                   d.answers.map((a, i) => (
                     <div key={i} className="answer-card">
-                      <strong>{a.author?.name || "Anonymous"}:</strong> {a.text}
+                      <strong>{a.author?.name || "Anonymous"}:</strong>{" "}
+                      {a.text}
                     </div>
                   ))
                 ) : (
@@ -195,7 +227,10 @@ function AskDoubt() {
                   placeholder="Write your answer..."
                   value={answers[d._id] || ""}
                   onChange={(e) =>
-                    setAnswers((prev) => ({ ...prev, [d._id]: e.target.value }))
+                    setAnswers((prev) => ({
+                      ...prev,
+                      [d._id]: e.target.value,
+                    }))
                   }
                 />
                 <button
