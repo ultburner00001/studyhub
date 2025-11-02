@@ -10,24 +10,27 @@ import doubtRoutes from "./routes/doubtRoutes.js";
 dotenv.config();
 const app = express();
 
-// ✅ Allow specific origins (Vercel + localhost)
+// ✅ Allowed Origins (Frontend URLs)
 const allowedOrigins = [
-  "http://localhost:5173",       // local dev
-  "http://localhost:3000",       // alt local dev
-  "https://studyhub-21ux.vercel.app", // your Vercel frontend
+  "http://localhost:5173", // Local dev
+  "http://localhost:3000",
+  "https://studyhub-21ux.vercel.app", // Your Vercel frontend
+  "https://studyhub-git-main-siddharth-amraotkars-projects.vercel.app/", // optional preview builds
 ];
 
+// ✅ CORS Middleware
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., server-to-server, curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
       } else {
-        return callback(new Error("Not allowed by CORS"));
+        console.warn(`❌ Blocked by CORS: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
       }
     },
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
@@ -37,7 +40,7 @@ app.use(express.json());
 // ✅ MongoDB Connection
 const MONGO_URI =
   process.env.MONGO_URI ||
-  "mongodb+srv://<your-username>:<your-password>@cluster0.mongodb.net/studyhub";
+  "mongodb+srv://ultburner00001_db_user:burner1234@studyhub.nwqwfgv.mongodb.net/?retryWrites=true&w=majority";
 
 mongoose
   .connect(MONGO_URI, {
@@ -47,21 +50,21 @@ mongoose
   .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => console.error("❌ MongoDB connection failed:", err));
 
-// ✅ Routes
+// ✅ API Routes
 app.use("/api/notes", noteRoutes);
 app.use("/api/timetable", timetableRoutes);
 app.use("/api/doubts", doubtRoutes);
 
-// ✅ Root route
+// ✅ Health check route
 app.get("/", (req, res) => {
-  res.send("📚 StudyHub API is running...");
+  res.send("📚 StudyHub Backend is running successfully!");
 });
 
-// ✅ Unknown routes
+// ✅ 404 route handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-// ✅ Server listen
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
