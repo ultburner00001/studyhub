@@ -19,8 +19,8 @@ export default function Notes() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [content, setContent] = useState("");
   const editorRef = useRef(null);
-  const saveTimer = useRef(null);
 
   const showToast = (msg, type = "info") => {
     const id = Date.now();
@@ -32,11 +32,8 @@ export default function Notes() {
     setLoading(true);
     try {
       const res = await httpClient.get("/notes");
-      if (res.data?.success) {
-        setNotes(res.data.notes || []);
-      } else {
-        showToast(res.data?.message || "Failed to load notes", "error");
-      }
+      if (res.data?.success) setNotes(res.data.notes || []);
+      else showToast(res.data?.message || "Failed to load notes", "error");
     } catch (err) {
       console.error("Fetch error:", err);
       showToast("Could not connect to server", "error");
@@ -59,15 +56,20 @@ export default function Notes() {
     setNotes((p) => [temp, ...p]);
     setCurrentNote(temp);
     setIsEditing(true);
-    setTimeout(() => editorRef.current?.focus(), 100);
+    setContent("");
+  };
+
+  const openNote = (note) => {
+    setCurrentNote(note);
+    setIsEditing(true);
+    setContent(note.content || "");
   };
 
   const saveNote = async () => {
     if (!currentNote) return;
     const title = currentNote.title?.trim() || "Untitled";
-    const content = editorRef.current?.innerText?.trim() || "";
-
-    if (!content) {
+    const trimmed = content.trim();
+    if (!trimmed) {
       showToast("Note content cannot be empty", "warning");
       return;
     }
@@ -75,8 +77,8 @@ export default function Notes() {
     setSaving(true);
     try {
       const res = currentNote._id
-        ? await httpClient.put(`/notes/${currentNote._id}`, { title, content })
-        : await httpClient.post("/notes", { title, content });
+        ? await httpClient.put(`/notes/${currentNote._id}`, { title, content: trimmed })
+        : await httpClient.post("/notes", { title, content: trimmed });
 
       if (res.data?.success) {
         const saved = res.data.note;
@@ -87,6 +89,7 @@ export default function Notes() {
           return [saved, ...others];
         });
         setCurrentNote(saved);
+        setIsEditing(false);
         showToast("✅ Note saved successfully", "success");
       } else {
         showToast(res.data?.message || "Failed to save note", "error");
@@ -96,11 +99,6 @@ export default function Notes() {
       showToast("Error saving note", "error");
     } finally {
       setSaving(false);
-      // safe delay prevents crash
-      setTimeout(() => {
-        setIsEditing(false);
-        setCurrentNote(null);
-      }, 200);
     }
   };
 
@@ -137,42 +135,6 @@ export default function Notes() {
     }
   };
 
-  const openNote = (note) => {
-    setCurrentNote(note);
-    setIsEditing(true);
-    setTimeout(() => {
-      if (editorRef.current) {
-        editorRef.current.innerText = note.content || "";
-        editorRef.current.focus();
-      }
-    }, 100);
-  };
-
-  // ✅ FIX: text reverse & listener error
-  useEffect(() => {
-    const el = editorRef.current;
-    if (!el) return;
-
-    const handleInput = () => {
-      if (!currentNote) return;
-      const text = el.innerText;
-      // update note content locally, not via React re-render
-      currentNote.content = text;
-
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        const key = `draft_${currentNote._id || currentNote.id}`;
-        localStorage.setItem(key, JSON.stringify({ ...currentNote, content: text }));
-      }, 800);
-    };
-
-    el.addEventListener("input", handleInput);
-    return () => {
-      // 🧩 SAFE cleanup (no crash)
-      if (el) el.removeEventListener("input", handleInput);
-    };
-  }, [currentNote]);
-
   const preview = (text) => {
     const clean = text?.replace(/<[^>]+>/g, "") || "";
     return clean.length > 80 ? clean.slice(0, 80) + "..." : clean || "Empty note";
@@ -180,7 +142,6 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* Toasts */}
       <div className="toast-container">
         {notifications.map((n) => (
           <div key={n.id} className={`toast ${n.type}`}>
@@ -189,7 +150,6 @@ export default function Notes() {
         ))}
       </div>
 
-      {/* Header */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
@@ -204,13 +164,11 @@ export default function Notes() {
       </header>
 
       <div className="notes-container">
-        {/* Sidebar */}
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
             <button className="btn btn-primary" onClick={createNote}>+ New Note</button>
           </div>
-
           {loading ? (
             <div className="loading">Loading...</div>
           ) : (
@@ -240,7 +198,6 @@ export default function Notes() {
           )}
         </aside>
 
-        {/* Editor */}
         <main className="notes-editor">
           {isEditing && currentNote ? (
             <div className="editor-wrap">
@@ -252,12 +209,12 @@ export default function Notes() {
                 }
                 placeholder="Note title"
               />
-              <div
+              <textarea
                 ref={editorRef}
-                className="note-content-editor"
-                contentEditable
-                suppressContentEditableWarning
-                data-placeholder="Start typing your note..."
+                className="note-content-textarea"
+                placeholder="Start typing your note..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
               />
               <div className="editor-actions">
                 <button
