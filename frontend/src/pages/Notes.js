@@ -96,11 +96,11 @@ export default function Notes() {
       showToast("Error saving note", "error");
     } finally {
       setSaving(false);
-      // 🔧 Don't immediately null currentNote — prevents white screen
+      // safe delay prevents crash
       setTimeout(() => {
         setIsEditing(false);
         setCurrentNote(null);
-      }, 300);
+      }, 200);
     }
   };
 
@@ -148,27 +148,28 @@ export default function Notes() {
     }, 100);
   };
 
-  // ✅ Fix reversed typing — don't cause re-renders on every keystroke
-  const onEditorInput = () => {
-    if (!currentNote || !editorRef.current) return;
-
-    const content = editorRef.current.innerText;
-    // Update note content in ref, not state → avoids React render loop
-    currentNote.content = content;
-
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const key = `draft_${currentNote._id || currentNote.id}`;
-      localStorage.setItem(key, JSON.stringify({ ...currentNote, content }));
-    }, 800);
-  };
-
+  // ✅ FIX: text reverse & listener error
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
-    el.addEventListener("input", onEditorInput);
+
+    const handleInput = () => {
+      if (!currentNote) return;
+      const text = el.innerText;
+      // update note content locally, not via React re-render
+      currentNote.content = text;
+
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        const key = `draft_${currentNote._id || currentNote.id}`;
+        localStorage.setItem(key, JSON.stringify({ ...currentNote, content: text }));
+      }, 800);
+    };
+
+    el.addEventListener("input", handleInput);
     return () => {
-      if (el) el.removeEventListener("input", onEditorInput);
+      // 🧩 SAFE cleanup (no crash)
+      if (el) el.removeEventListener("input", handleInput);
     };
   }, [currentNote]);
 
@@ -179,7 +180,7 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* 🔔 Toast Notifications */}
+      {/* Toasts */}
       <div className="toast-container">
         {notifications.map((n) => (
           <div key={n.id} className={`toast ${n.type}`}>
@@ -188,39 +189,26 @@ export default function Notes() {
         ))}
       </div>
 
-      {/* 🔹 Header */}
+      {/* Header */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
+          <Link to="/" className="title">StudyHub</Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link active">
-            Notes
-          </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link">
-            Timetable
-          </Link>
-          <Link to="/ask-doubt" className="nav-link">
-            Ask Doubt
-          </Link>
+          <Link to="/notes" className="nav-link active">Notes</Link>
+          <Link to="/courses" className="nav-link">Courses</Link>
+          <Link to="/timetable" className="nav-link">Timetable</Link>
+          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
         </nav>
       </header>
 
-      {/* 🔹 Layout */}
       <div className="notes-container">
         {/* Sidebar */}
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={createNote}>
-              + New Note
-            </button>
+            <button className="btn btn-primary" onClick={createNote}>+ New Note</button>
           </div>
 
           {loading ? (
@@ -242,12 +230,7 @@ export default function Notes() {
                       <div className="note-title">{n.title || "Untitled"}</div>
                       <div className="note-preview">{preview(n.content)}</div>
                     </div>
-                    <button
-                      className="btn-delete"
-                      onClick={() => deleteNote(n)}
-                    >
-                      🗑️
-                    </button>
+                    <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
                   </div>
                 ))
               ) : (
