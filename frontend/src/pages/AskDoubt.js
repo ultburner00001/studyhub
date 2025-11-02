@@ -141,6 +141,14 @@ function AskDoubt() {
           <Link to="/timetable" className="nav-link">
             Timetable
           </Link>
+    <a
+            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+          >
+            PYQs
+          </a>
           <Link to="/ask-doubt" className="nav-link active">
             Ask Doubt
           </Link>
