@@ -1,31 +1,42 @@
+// 📁 models/Doubt.js
 import mongoose from "mongoose";
+
+const answerSchema = new mongoose.Schema(
+  {
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    author: {
+      name: { type: String, default: "Anonymous" },
+    },
+  },
+  { timestamps: true }
+);
 
 const doubtSchema = new mongoose.Schema(
   {
     name: {
       type: String,
+      default: "Guest User",
+    },
+    question: {
+      type: String,
+      required: true,
       trim: true,
-      default: "Anonymous",
+    },
+    description: {
+      type: String,
+      trim: true,
     },
     subject: {
       type: String,
       trim: true,
     },
-    question: {
-      type: String,
-      required: [true, "Question is required"],
-      trim: true,
-      minlength: [5, "Question must be at least 5 characters long"],
-    },
-    status: {
-      type: String,
-      enum: ["Pending", "Answered"],
-      default: "Pending",
-    },
+    answers: [answerSchema],
   },
-  {
-    timestamps: true, // automatically adds createdAt and updatedAt
-  }
+  { timestamps: true }
 );
 
 export default mongoose.model("Doubt", doubtSchema);
