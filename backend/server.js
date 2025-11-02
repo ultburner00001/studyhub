@@ -10,23 +10,22 @@ import doubtRoutes from "./routes/doubtRoutes.js";
 dotenv.config();
 const app = express();
 
-// ✅ Allowed Origins (Frontend URLs)
+// ✅ Allowed Origins — include *all* possible Vercel preview URLs if needed
 const allowedOrigins = [
-  "http://localhost:5173", // Local dev
   "http://localhost:3000",
-  "https://studyhub-5gij.vercel.app", // Your Vercel frontend
-  "https://studyhub-5gij-7go5rjaok-mehul-swamis-projects.vercel.app", // optional preview builds
+  "https://studyhub-5gij.vercel.app",
+  "https://studyhub-5gij-8u2vf7j6s-mehul-swamis-projects.vercel.app", // your current deploy URL
+  "https://studyhub-5gij-7go5rjaok-mehul-swamis-projects.vercel.app", // optional older preview
 ];
 
 // ✅ CORS Middleware
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., server-to-server, curl)
+    origin: function (origin, callback) {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`❌ Blocked by CORS: ${origin}`);
+        console.warn("❌ Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
