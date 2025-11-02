@@ -7,7 +7,7 @@ const Timetable = () => {
   const [editing, setEditing] = useState(false);
   const [newSchedule, setNewSchedule] = useState([]);
 
-  // ✅ Fetch timetable
+  // ✅ Fetch timetable from backend
   const fetchTimetable = async () => {
     try {
       setLoading(true);
@@ -29,13 +29,6 @@ const Timetable = () => {
     fetchTimetable();
   }, []);
 
-  // ✅ Handle slot updates
-  const updateSlot = (dayIndex, slotIndex, field, value) => {
-    const updated = [...newSchedule];
-    updated[dayIndex].slots[slotIndex][field] = value;
-    setNewSchedule(updated);
-  };
-
   // ✅ Add new day
   const addDay = () => {
     setNewSchedule([
@@ -44,7 +37,21 @@ const Timetable = () => {
     ]);
   };
 
-  // ✅ Save timetable
+  // ✅ Add slot to a day
+  const addSlot = (i) => {
+    const updated = [...newSchedule];
+    updated[i].slots.push({ time: "", subject: "", topic: "" });
+    setNewSchedule(updated);
+  };
+
+  // ✅ Update slot value
+  const updateSlot = (dayIndex, slotIndex, field, value) => {
+    const updated = [...newSchedule];
+    updated[dayIndex].slots[slotIndex][field] = value;
+    setNewSchedule(updated);
+  };
+
+  // ✅ Save to backend
   const saveTimetable = async () => {
     try {
       const res = await fetch("https://studyhub-21ux.onrender.com/api/timetable", {
@@ -65,7 +72,7 @@ const Timetable = () => {
   };
 
   return (
-    <div className="timetable-container">
+    <div className="timetable-wrapper">
       <div className="timetable-header">
         <h1>🗓️ Study Timetable</h1>
         {!editing && (
@@ -78,42 +85,11 @@ const Timetable = () => {
       {loading ? (
         <div className="loading">Loading...</div>
       ) : (
-        <>
-          {/* ✅ VIEW MODE */}
-          {!editing && (
-            <div className="timetable-grid">
-              {timetable.length > 0 ? (
-                timetable.map((dayObj, i) => (
-                  <div key={i} className="day-card">
-                    <h2>{dayObj.day}</h2>
-                    <ul>
-                      {dayObj.slots.map((slot, j) => (
-                        <li key={j}>
-                          <p>
-                            <strong>Time:</strong> {slot.time}
-                          </p>
-                          <p>
-                            <strong>Subject:</strong> {slot.subject}
-                          </p>
-                          {slot.topic && (
-                            <p className="topic">
-                              <strong>Topic:</strong> {slot.topic}
-                            </p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))
-              ) : (
-                <p className="empty">No timetable added yet.</p>
-              )}
-            </div>
-          )}
-
-          {/* ✅ EDIT MODE */}
+        <div className={`timetable-two-column ${editing ? "active" : ""}`}>
+          {/* ✅ Left: Editor */}
           {editing && (
-            <div className="editor-section">
+            <div className="editor-pane">
+              <h2>Edit Timetable</h2>
               {newSchedule.map((dayObj, i) => (
                 <div key={i} className="editor-day">
                   <input
@@ -152,18 +128,7 @@ const Timetable = () => {
                       />
                     </div>
                   ))}
-                  <button
-                    className="btn text"
-                    onClick={() => {
-                      const updated = [...newSchedule];
-                      updated[i].slots.push({
-                        time: "",
-                        subject: "",
-                        topic: "",
-                      });
-                      setNewSchedule(updated);
-                    }}
-                  >
+                  <button className="btn text" onClick={() => addSlot(i)}>
                     + Add Slot
                   </button>
                 </div>
@@ -188,7 +153,40 @@ const Timetable = () => {
               </div>
             </div>
           )}
-        </>
+
+          {/* ✅ Right: Live Preview */}
+          <div className="preview-pane">
+            <h2>📅 Current Schedule</h2>
+            {timetable.length > 0 ? (
+              <div className="timetable-grid">
+                {timetable.map((dayObj, i) => (
+                  <div key={i} className="day-card">
+                    <h3>{dayObj.day}</h3>
+                    <ul>
+                      {dayObj.slots.map((slot, j) => (
+                        <li key={j}>
+                          <p>
+                            <strong>Time:</strong> {slot.time}
+                          </p>
+                          <p>
+                            <strong>Subject:</strong> {slot.subject}
+                          </p>
+                          {slot.topic && (
+                            <p className="topic">
+                              <strong>Topic:</strong> {slot.topic}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty">No timetable added yet.</p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
