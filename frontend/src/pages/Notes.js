@@ -88,12 +88,18 @@ export default function Notes() {
 
       if (res.data?.success) {
         const saved = res.data.note;
-        setNotes((prev) => {
-          const filtered = prev.filter(
-            (n) => n._id !== saved._id && n.id !== activeNote.id
-          );
-          return [saved, ...filtered];
-        });
+        setNotes((prev = []) => {
+  if (!Array.isArray(prev)) return [saved];
+
+  const filtered = prev.filter(
+    (n) =>
+      n &&
+      (n._id !== saved?._id) &&
+      (n.id !== activeNote?.id)
+  );
+
+  return [saved, ...filtered];
+});
         setActiveNote(saved);
         notify("✅ Note saved successfully!", "success");
       } else notify("❌ Could not save note", "error");
