@@ -128,30 +128,32 @@ export default function Notes() {
   };
 
   return (
-    <div className="notes-page">
-      {message && <div className={`toast ${message.type}`}>{message.text}</div>}
-
-      {/* ✅ Navbar (same structure as Timetable.js) */}
-      <nav className="navbar">
-        <div className="logo">📘 StudyHub</div>
-        <div className="nav-links">
-          <Link to="/notes" className="active">
-            Notes
-          </Link>
-          <Link to="/courses">Courses</Link>
-          <Link to="/timetable">Timetable</Link>
-          <Link to="/ask-doubt">Ask Doubt</Link>
+    <div className="Notes-page">
+      {/* ✅ Navbar */}
+      <header className="topbar">
+        <div className="brand">
+          <span className="logo">📚</span>
+          <Link to="/" className="title">StudyHub</Link>
         </div>
-      </nav>
+        <nav className="nav">
+          <Link to="/notes" className="nav-link">Notes</Link>
+          <Link to="/courses" className="nav-link">Courses</Link>
+          <Link to="/timetable" className="nav-link active">Timetable</Link>
+          <a
+            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+          >
+            PYQs
+          </a>
+          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
+        </nav>
+        <div className="actions">
+          <Link to="/" className="btn btn-outline">🏠 Home</Link>
+        </div>
+      </header>
 
-      <div className="notes-container">
-        <aside className="notes-sidebar">
-          <div className="sidebar-header">
-            <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={newNote}>
-              + New Note
-            </button>
-          </div>
 
           {loading ? (
             <div className="loading">⏳ Loading notes...</div>
