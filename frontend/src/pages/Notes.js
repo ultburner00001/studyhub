@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
+// ✅ Correct environment variable for React
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
-
-
-
+// ✅ Axios instance
 const http = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
@@ -23,7 +23,7 @@ export default function Notes() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Show small message box for feedback
+  // Toast messages
   const notify = (msg, type = "info") => {
     setMessage({ text: msg, type });
     setTimeout(() => setMessage(null), 3000);
@@ -48,7 +48,7 @@ export default function Notes() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // ✅ Create a new note
+  // ✅ Create new note
   const newNote = () => {
     const temp = {
       id: `local-${Date.now()}`,
@@ -61,7 +61,7 @@ export default function Notes() {
     setContent("");
   };
 
-  // ✅ Open an existing note
+  // ✅ Open existing note
   const openNote = (note) => {
     setActiveNote(note);
     setTitle(note.title);
@@ -119,31 +119,29 @@ export default function Notes() {
     if (!note) return;
     if (!window.confirm("Delete this note?")) return;
 
-    // Local note deletion
     if (!note._id) {
       setNotes((prev) => prev.filter((n) => n.id !== note.id));
-      if (activeNote?.id === note.id) {
-        setActiveNote(null);
-      }
+      if (activeNote?.id === note.id) setActiveNote(null);
       notify("🗑️ Local note deleted", "info");
       return;
     }
 
-    // Backend note deletion
     try {
       const res = await http.delete(`/notes/${note._id}`);
       if (res.data?.success) {
         setNotes((prev) => prev.filter((n) => n._id !== note._id));
         if (activeNote?._id === note._id) setActiveNote(null);
         notify("🗑️ Note deleted", "success");
-      } else notify("Failed to delete note", "error");
+      } else {
+        notify("Failed to delete note", "error");
+      }
     } catch (err) {
       console.error(err);
       notify("Server error deleting note", "error");
     }
   };
 
-  // ✅ Preview for sidebar
+  // ✅ Note preview
   const previewText = (txt) => {
     const clean = txt?.replace(/<[^>]+>/g, "") || "";
     return clean.length > 60 ? clean.slice(0, 60) + "..." : clean || "Empty note";
@@ -151,34 +149,41 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* Toast / Message */}
-      {message && (
-        <div className={`toast ${message.type}`}>
-          {message.text}
-        </div>
-      )}
+      {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
-      {/* Topbar */}
+      {/* Header */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📘</span>
-          <Link to="/" className="title">StudyHub</Link>
+          <Link to="/" className="title">
+            StudyHub
+          </Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link active">Notes</Link>
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/timetable" className="nav-link">Timetable</Link>
-          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
+          <Link to="/notes" className="nav-link active">
+            Notes
+          </Link>
+          <Link to="/courses" className="nav-link">
+            Courses
+          </Link>
+          <Link to="/timetable" className="nav-link">
+            Timetable
+          </Link>
+          <Link to="/ask-doubt" className="nav-link">
+            Ask Doubt
+          </Link>
         </nav>
       </header>
 
-      {/* Main Layout */}
+      {/* Layout */}
       <div className="notes-container">
         {/* Sidebar */}
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={newNote}>+ New Note</button>
+            <button className="btn btn-primary" onClick={newNote}>
+              + New Note
+            </button>
           </div>
 
           {loading ? (
@@ -189,7 +194,8 @@ export default function Notes() {
                 <div
                   key={n._id || n.id}
                   className={`note-item ${
-                    activeNote && (activeNote._id === n._id || activeNote.id === n.id)
+                    activeNote &&
+                    (activeNote._id === n._id || activeNote.id === n.id)
                       ? "active"
                       : ""
                   }`}
@@ -198,7 +204,12 @@ export default function Notes() {
                     <div className="note-title">{n.title}</div>
                     <div className="note-preview">{previewText(n.content)}</div>
                   </div>
-                  <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
+                  <button
+                    className="btn-delete"
+                    onClick={() => deleteNote(n)}
+                  >
+                    🗑️
+                  </button>
                 </div>
               ))}
             </div>
