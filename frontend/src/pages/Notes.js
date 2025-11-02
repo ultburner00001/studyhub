@@ -4,7 +4,8 @@ import axios from "axios";
 import "./Notes.css";
 
 const API_URL =
-  (import.meta.env.VITE_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
+  const API_URL = (process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
+
 
 const http = axios.create({
   baseURL: API_URL,
