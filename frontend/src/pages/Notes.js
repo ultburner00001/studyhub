@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
-// 🔧 Axios client setup
+// ✅ Axios setup
 const API_URL =
   (import.meta.env.VITE_API_URL || "https://studyhub-21ux.onrender.com") + "/api";
 
@@ -23,14 +23,14 @@ export default function Notes() {
   const editorRef = useRef(null);
   const saveTimer = useRef(null);
 
-  // ✅ Toast helper
+  // ✅ Toast system
   const showToast = (msg, type = "info") => {
     const id = Date.now();
     setNotifications((p) => [...p, { id, msg, type }]);
     setTimeout(() => setNotifications((p) => p.filter((t) => t.id !== id)), 4000);
   };
 
-  // ✅ Fetch all notes from backend
+  // ✅ Fetch notes
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
@@ -52,7 +52,7 @@ export default function Notes() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // ✅ Create a new blank note
+  // ✅ Create a new note
   const createNote = () => {
     const temp = {
       id: `local-${Date.now()}`,
@@ -63,10 +63,10 @@ export default function Notes() {
     setNotes((p) => [temp, ...p]);
     setCurrentNote(temp);
     setIsEditing(true);
-    setTimeout(() => editorRef.current?.focus(), 50);
+    setTimeout(() => editorRef.current?.focus(), 100);
   };
 
-  // ✅ Save note (create or update)
+  // ✅ Save note (create/update)
   const saveNote = async () => {
     if (!currentNote) return;
     const title = currentNote.title?.trim() || "Untitled";
@@ -111,8 +111,8 @@ export default function Notes() {
     const id = note._id || note.id;
     if (!window.confirm("Delete this note?")) return;
 
+    // local-only delete
     if (!note._id) {
-      // Local-only note
       setNotes((prev) => prev.filter((n) => n.id !== id));
       if (currentNote?.id === id) {
         setCurrentNote(null);
@@ -140,7 +140,7 @@ export default function Notes() {
     }
   };
 
-  // ✅ Open note in editor
+  // ✅ Open note
   const openNote = (note) => {
     setCurrentNote(note);
     setIsEditing(true);
@@ -149,23 +149,35 @@ export default function Notes() {
         editorRef.current.innerHTML = note.content || "";
         editorRef.current.focus();
       }
-    }, 50);
+    }, 100);
   };
 
-  // ✅ Live text update (fix reversed typing + autosave)
+  // ✅ Handle typing + autosave (fixed reversed input + null crash)
   const onEditorInput = () => {
-    if (!currentNote) return;
-    const content = editorRef.current.innerHTML;
-    setCurrentNote((p) => ({ ...p, content }));
+    if (!editorRef.current || !currentNote) return;
+
+    const content = editorRef.current.innerHTML || "";
+    setCurrentNote((prev) => ({ ...prev, content }));
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      const key = `draft_${currentNote._id || currentNote.id}`;
-      localStorage.setItem(key, JSON.stringify({ ...currentNote, content }));
-    }, 500);
+      try {
+        const key = `draft_${currentNote._id || currentNote.id}`;
+        localStorage.setItem(key, JSON.stringify({ ...currentNote, content }));
+      } catch (err) {
+        console.warn("Draft save failed:", err);
+      }
+    }, 600);
   };
 
-  // ✅ Strip HTML for preview
+  // ✅ Clean up timers when unmounting
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, []);
+
+  // ✅ Text preview
   const preview = (html) => {
     const text = html?.replace(/<[^>]+>/g, "") || "";
     return text.length > 80 ? text.slice(0, 80) + "..." : text || "Empty note";
@@ -173,7 +185,7 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* 🔔 Toast Notifications */}
+      {/* 🔔 Toasts */}
       <div className="toast-container">
         {notifications.map((n) => (
           <div key={n.id} className={`toast ${n.type}`}>{n.msg}</div>
@@ -250,6 +262,7 @@ export default function Notes() {
                 suppressContentEditableWarning
                 onInput={onEditorInput}
                 data-placeholder="Start typing your note..."
+                style={{ minHeight: 300 }}
               />
               <div className="editor-actions">
                 <button
