@@ -6,11 +6,12 @@ import dotenv from "dotenv";
 import noteRoutes from "./routes/noteRoutes.js";
 import timetableRoutes from "./routes/timetableRoutes.js";
 import doubtRoutes from "./routes/doubtRoutes.js";
+import courseRoutes from "./routes/courses.js"; // ✅ added
 
 dotenv.config();
 const app = express();
 
-// ✅ Dynamically allow Vercel preview URLs and localhost
+// ✅ Allowed origins (local + main vercel + preview subdomains)
 const allowedOrigins = [
   "http://localhost:3000",
   "https://studyhub-5gij.vercel.app",
@@ -20,9 +21,9 @@ app.use(
   cors({
     origin: function (origin, callback) {
       if (
-        !origin ||
+        !origin || // allow server-to-server requests
         allowedOrigins.includes(origin) ||
-        /\.vercel\.app$/.test(origin)
+        /\.vercel\.app$/.test(origin) // allow Vercel preview deployments
       ) {
         callback(null, true);
       } else {
@@ -50,18 +51,22 @@ mongoose
   .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => console.error("❌ MongoDB connection failed:", err));
 
-// ✅ Routes
+// ✅ API Routes
 app.use("/api/notes", noteRoutes);
 app.use("/api/timetable", timetableRoutes);
 app.use("/api/doubts", doubtRoutes);
+app.use("/api/courses", courseRoutes); // ✅ new route for static courses
 
+// ✅ Health check route
 app.get("/", (req, res) => {
   res.send("📚 StudyHub Backend is running successfully!");
 });
 
+// ✅ 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
