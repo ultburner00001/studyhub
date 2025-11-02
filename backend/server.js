@@ -16,7 +16,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://studyhub-tan.vercel.app",
   "https://studyhub-21ux.vercel.app", // Your Vercel frontend
-  "https://studyhub-git-main-siddharth-amraotkars-projects.vercel.app", // optional preview builds
+  "https://studyhub-61ru5i7yh-mehul-swamis-projects.vercel.app", // optional preview builds
 ];
 
 // ✅ CORS Middleware
