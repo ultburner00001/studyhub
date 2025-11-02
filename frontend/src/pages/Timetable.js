@@ -1,362 +1,235 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
-import axios from "axios";
-import "./Timetable.css";
+import React, { useState, useEffect } from "react";
 
-function Timetable() {
-  const [schedule, setSchedule] = useState([]);
-  const [activeDay, setActiveDay] = useState("Monday");
-  const [newSlot, setNewSlot] = useState({
-    day: "Monday",
-    time: "",
-    subject: "",
-    topic: "",
-  });
-  const [editingSlot, setEditingSlot] = useState(null);
-  const [notifications, setNotifications] = useState([]);
+const Timetable = () => {
+  const [timetable, setTimetable] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [newSchedule, setNewSchedule] = useState([]);
 
-  const days = useMemo(
-    () => [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ],
-    []
-  );
+  // ✅ Fetch Timetable
+  const fetchTimetable = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("https://studyhub-21ux.onrender.com/api/timetable");
+      const data = await res.json();
+      if (data.success && data.timetable.length > 0) {
+        setTimetable(data.timetable[0].schedule);
+      } else {
+        setTimetable([]);
+      }
+    } catch (err) {
+      console.error("Error fetching timetable:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const timeSlots = useMemo(
-    () => [
-      "6:00 AM",
-      "7:00 AM",
-      "8:00 AM",
-      "9:00 AM",
-      "10:00 AM",
-      "11:00 AM",
-      "12:00 PM",
-      "1:00 PM",
-      "2:00 PM",
-      "3:00 PM",
-      "4:00 PM",
-      "5:00 PM",
-      "6:00 PM",
-      "7:00 PM",
-      "8:00 PM",
-      "9:00 PM",
-      "10:00 PM",
-    ],
-    []
-  );
-
-  // ✅ Your backend API URL
-  const backendUrl = "https://studyhub-21ux.onrender.com/api/timetable";
-
-  // ✅ Notification function
-  const showNotification = useCallback((message, type = "info") => {
-    const id = Date.now();
-    setNotifications((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 3000);
+  useEffect(() => {
+    fetchTimetable();
   }, []);
 
-  // ✅ Fetch from MongoDB when component loads
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.get(backendUrl);
-        if (res.data.success && res.data.timetable.length > 0) {
-          setSchedule(res.data.timetable[0].schedule);
-          console.log("✅ Timetable loaded from MongoDB");
-        } else {
-          setSchedule(days.map((d) => ({ day: d, slots: [] })));
-        }
-      } catch (err) {
-        console.error("❌ Error loading timetable:", err);
-        setSchedule(days.map((d) => ({ day: d, slots: [] })));
+  // ✅ Handle Adding a Day
+  const addDay = () => {
+    setNewSchedule([
+      ...newSchedule,
+      { day: "", slots: [{ time: "", subject: "", topic: "" }] },
+    ]);
+  };
+
+  // ✅ Handle Slot Change
+  const updateSlot = (dayIndex, slotIndex, field, value) => {
+    const updated = [...newSchedule];
+    updated[dayIndex].slots[slotIndex][field] = value;
+    setNewSchedule(updated);
+  };
+
+  // ✅ Handle Save
+  const saveTimetable = async () => {
+    try {
+      const res = await fetch("https://studyhub-21ux.onrender.com/api/timetable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schedule: newSchedule }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("✅ Timetable saved successfully!");
+        fetchTimetable();
+        setEditing(false);
+        setNewSchedule([]);
       }
-    };
-    fetchData();
-  }, [days]);
-
-  // ✅ Auto-sync changes to MongoDB
-  useEffect(() => {
-    if (schedule.length > 0) {
-      axios
-        .post(backendUrl, { schedule })
-        .then(() => console.log("✅ Timetable synced with MongoDB"))
-        .catch((err) => console.error("❌ Failed to sync:", err));
+    } catch (err) {
+      console.error("Error saving timetable:", err);
     }
-  }, [schedule]);
-
-  // ✅ Add new slot
-  const addSlot = () => {
-    if (!newSlot.time || !newSlot.subject) {
-      showNotification("Please fill in both time and subject", "warning");
-      return;
-    }
-
-    const updatedSchedule = schedule.map((day) => {
-      if (day.day === newSlot.day) {
-        const slotExists = day.slots.some((s) => s.time === newSlot.time);
-        if (slotExists) {
-          showNotification("Slot already exists at this time", "error");
-          return day;
-        }
-        return {
-          ...day,
-          slots: [...day.slots, { ...newSlot, isCompleted: false }],
-        };
-      }
-      return day;
-    });
-
-    setSchedule(updatedSchedule);
-    setNewSlot({ day: "Monday", time: "", subject: "", topic: "" });
-    showNotification("Session added successfully", "success");
   };
 
-  // ✅ Delete slot
-  const deleteSlot = (day, time) => {
-    const updatedSchedule = schedule.map((d) =>
-      d.day === day ? { ...d, slots: d.slots.filter((s) => s.time !== time) } : d
-    );
-    setSchedule(updatedSchedule);
-    showNotification("Session deleted", "info");
-  };
-
-  // ✅ Toggle completion
-  const toggleComplete = (day, time) => {
-    const updatedSchedule = schedule.map((d) =>
-      d.day === day
-        ? {
-            ...d,
-            slots: d.slots.map((s) =>
-              s.time === time ? { ...s, isCompleted: !s.isCompleted } : s
-            ),
-          }
-        : d
-    );
-    setSchedule(updatedSchedule);
-  };
-
-  // ✅ Edit slot
-  const startEdit = (day, time) => {
-    setEditingSlot({ day, time });
-  };
-
-  const saveEdit = (day, time, newData) => {
-    const updatedSchedule = schedule.map((d) =>
-      d.day === day
-        ? {
-            ...d,
-            slots: d.slots.map((s) => (s.time === time ? { ...s, ...newData } : s)),
-          }
-        : d
-    );
-    setSchedule(updatedSchedule);
-    setEditingSlot(null);
-  };
-
-  const getDayData = (day) =>
-    schedule.find((d) => d.day === day) || { slots: [] };
-
-  // ✅ UI Rendering
   return (
-    <div className="timetable-page">
-      {/* Notifications */}
-      <div className="notifications">
-        {notifications.map((n) => (
-          <div key={n.id} className={`notification ${n.type}`}>
-            {n.message}
-          </div>
-        ))}
-      </div>
-
-      {/* Navbar */}
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo">📚</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
-        </div>
-        <nav className="nav">
-          <Link to="/notes" className="nav-link">
-            Notes
-          </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link active">
-            Timetable
-          </Link>
-          <a
-            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            PYQs
-          </a>
-          <Link to="/ask-doubt" className="nav-link">
-            Ask Doubt
-          </Link>
-        </nav>
-        <div className="actions">
-          <Link to="/" className="btn btn-outline">
-            Back to Home
-          </Link>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="timetable-container">
-        <h1>📅 Study Timetable</h1>
-        <p>Plan and track your daily study sessions easily!</p>
-
-        {/* Add Session */}
-        <div className="add-slot-form">
-          <h3>Add New Session</h3>
-          <div className="form-grid">
-            <select
-              value={newSlot.day}
-              onChange={(e) =>
-                setNewSlot({ ...newSlot, day: e.target.value })
-              }
-            >
-              {days.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-
-            <select
-              value={newSlot.time}
-              onChange={(e) =>
-                setNewSlot({ ...newSlot, time: e.target.value })
-              }
-            >
-              <option value="">Select Time</option>
-              {timeSlots.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              placeholder="Subject"
-              value={newSlot.subject}
-              onChange={(e) =>
-                setNewSlot({ ...newSlot, subject: e.target.value })
-              }
-            />
-            <input
-              type="text"
-              placeholder="Topic (optional)"
-              value={newSlot.topic}
-              onChange={(e) =>
-                setNewSlot({ ...newSlot, topic: e.target.value })
-              }
-            />
-            <button className="btn btn-primary" onClick={addSlot}>
-              Add
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs for Days */}
-        <div className="days-tabs">
-          {days.map((day) => (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white px-4 sm:px-10 py-10">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-gray-800">
+            🗓️ Study Timetable
+          </h1>
+          {!editing && (
             <button
-              key={day}
-              className={`day-tab ${activeDay === day ? "active" : ""}`}
-              onClick={() => setActiveDay(day)}
+              onClick={() => setEditing(true)}
+              className="px-5 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all"
             >
-              {day}
+              Add / Edit Timetable
             </button>
-          ))}
+          )}
         </div>
 
-        {/* Schedule Display */}
-        <div className="day-schedule">
-          <h2>{activeDay}</h2>
-          <div className="schedule-slots">
-            {timeSlots.map((time) => {
-              const slot = getDayData(activeDay).slots.find(
-                (s) => s.time === time
-              );
-              return (
-                <div key={time} className="slot-row">
-                  <div className="time">{time}</div>
-                  {slot ? (
-                    editingSlot &&
-                    editingSlot.day === activeDay &&
-                    editingSlot.time === time ? (
-                      <div className="slot-edit">
+        {/* Loading */}
+        {loading ? (
+          <div className="text-center py-10 text-gray-600 text-lg">Loading...</div>
+        ) : (
+          <>
+            {/* View Mode */}
+            {!editing && (
+              <div className="grid md:grid-cols-2 gap-6">
+                {timetable.length > 0 ? (
+                  timetable.map((dayObj, i) => (
+                    <div
+                      key={i}
+                      className="bg-white shadow-lg rounded-2xl p-6 hover:shadow-xl transition-all border border-gray-100"
+                    >
+                      <h2 className="text-xl font-semibold text-indigo-700 mb-3">
+                        {dayObj.day}
+                      </h2>
+                      {dayObj.slots.length > 0 ? (
+                        <ul className="space-y-2">
+                          {dayObj.slots.map((slot, j) => (
+                            <li
+                              key={j}
+                              className="bg-indigo-50 p-3 rounded-xl border border-indigo-100"
+                            >
+                              <p className="text-gray-800">
+                                <strong>Time:</strong> {slot.time}
+                              </p>
+                              <p className="text-gray-700">
+                                <strong>Subject:</strong> {slot.subject}
+                              </p>
+                              {slot.topic && (
+                                <p className="text-gray-600 text-sm">
+                                  <strong>Topic:</strong> {slot.topic}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-400">No slots added yet.</p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic">No timetable added yet.</p>
+                )}
+              </div>
+            )}
+
+            {/* Edit Mode */}
+            {editing && (
+              <div className="space-y-6">
+                {newSchedule.map((dayObj, i) => (
+                  <div
+                    key={i}
+                    className="bg-white border border-gray-200 rounded-2xl p-5 shadow-md"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Day (e.g. Monday)"
+                      value={dayObj.day}
+                      onChange={(e) => {
+                        const updated = [...newSchedule];
+                        updated[i].day = e.target.value;
+                        setNewSchedule(updated);
+                      }}
+                      className="w-full p-3 border rounded-xl mb-4"
+                    />
+                    {dayObj.slots.map((slot, j) => (
+                      <div
+                        key={j}
+                        className="grid sm:grid-cols-3 gap-3 mb-3 border-b pb-3"
+                      >
                         <input
+                          type="text"
+                          placeholder="Time"
+                          value={slot.time}
+                          onChange={(e) =>
+                            updateSlot(i, j, "time", e.target.value)
+                          }
+                          className="p-2 border rounded-lg"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Subject"
                           value={slot.subject}
                           onChange={(e) =>
-                            saveEdit(activeDay, time, {
-                              subject: e.target.value,
-                            })
+                            updateSlot(i, j, "subject", e.target.value)
                           }
+                          className="p-2 border rounded-lg"
                         />
                         <input
-                          value={slot.topic || ""}
+                          type="text"
+                          placeholder="Topic (optional)"
+                          value={slot.topic}
                           onChange={(e) =>
-                            saveEdit(activeDay, time, {
-                              topic: e.target.value,
-                            })
+                            updateSlot(i, j, "topic", e.target.value)
                           }
+                          className="p-2 border rounded-lg"
                         />
-                        <button
-                          className="btn btn-small"
-                          onClick={() => setEditingSlot(null)}
-                        >
-                          ✅ Done
-                        </button>
                       </div>
-                    ) : (
-                      <div
-                        className={`slot-card ${
-                          slot.isCompleted ? "completed" : ""
-                        }`}
-                      >
-                        <div>
-                          <strong>{slot.subject}</strong>
-                          {slot.topic && (
-                            <div className="topic">{slot.topic}</div>
-                          )}
-                        </div>
-                        <div className="actions">
-                          <button
-                            onClick={() => toggleComplete(activeDay, time)}
-                          >
-                            {slot.isCompleted ? "✅" : "⭕"}
-                          </button>
-                          <button onClick={() => startEdit(activeDay, time)}>
-                            ✏️
-                          </button>
-                          <button onClick={() => deleteSlot(activeDay, time)}>
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  ) : (
-                    <div className="slot-empty">No session</div>
-                  )}
+                    ))}
+                    <button
+                      onClick={() => {
+                        const updated = [...newSchedule];
+                        updated[i].slots.push({
+                          time: "",
+                          subject: "",
+                          topic: "",
+                        });
+                        setNewSchedule(updated);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 font-medium mt-2"
+                    >
+                      + Add Slot
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={addDay}
+                    className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700"
+                  >
+                    + Add Day
+                  </button>
+                  <button
+                    onClick={saveTimetable}
+                    className="bg-green-600 text-white px-5 py-2 rounded-xl hover:bg-green-700"
+                  >
+                    Save Timetable
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditing(false);
+                      setNewSchedule([]);
+                    }}
+                    className="bg-gray-300 text-gray-800 px-5 py-2 rounded-xl hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
-}
+};
 
 export default Timetable;
