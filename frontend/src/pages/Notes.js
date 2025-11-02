@@ -23,19 +23,21 @@ export default function Notes() {
 
   const notify = (msg, type = "info") => {
     setMessage({ text: msg, type });
-    setTimeout(() => setMessage(null), 3000);
+    setTimeout(() => setMessage(null), 2500);
   };
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
       const res = await http.get("/notes");
-      if (res.data?.success && Array.isArray(res.data.notes))
+      if (res.data?.success && Array.isArray(res.data.notes)) {
         setNotes(res.data.notes);
-      else setNotes([]);
+      } else {
+        setNotes([]);
+      }
     } catch (err) {
       console.error(err);
-      notify("Server error while fetching notes", "error");
+      notify("⚠️ Error loading notes", "error");
       setNotes([]);
     } finally {
       setLoading(false);
@@ -47,7 +49,11 @@ export default function Notes() {
   }, [fetchNotes]);
 
   const newNote = () => {
-    const temp = { id: `local-${Date.now()}`, title: "Untitled Note", content: "" };
+    const temp = {
+      id: `local-${Date.now()}`,
+      title: "Untitled Note",
+      content: "",
+    };
     setNotes((prev) => [temp, ...prev]);
     setActiveNote(temp);
     setTitle(temp.title);
@@ -63,7 +69,7 @@ export default function Notes() {
   const saveNote = async () => {
     if (!activeNote) return;
     const trimmed = content.trim();
-    if (!trimmed) return notify("Note content cannot be empty", "warning");
+    if (!trimmed) return notify("✏️ Write something before saving!", "warning");
 
     setSaving(true);
     try {
@@ -89,11 +95,11 @@ export default function Notes() {
           return [saved, ...filtered];
         });
         setActiveNote(saved);
-        notify("✅ Note saved successfully", "success");
-      } else notify("Failed to save note", "error");
+        notify("✅ Note saved successfully!", "success");
+      } else notify("❌ Could not save note", "error");
     } catch (err) {
       console.error(err);
-      notify("Error saving note", "error");
+      notify("⚠️ Server error while saving", "error");
     } finally {
       setSaving(false);
     }
@@ -101,7 +107,7 @@ export default function Notes() {
 
   const deleteNote = async (note) => {
     if (!note) return;
-    if (!window.confirm("Delete this note?")) return;
+    if (!window.confirm("Delete this note permanently?")) return;
 
     if (!note._id) {
       setNotes((prev) => prev.filter((n) => n.id !== note.id));
@@ -115,10 +121,10 @@ export default function Notes() {
         setNotes((prev) => prev.filter((n) => n._id !== note._id));
         if (activeNote?._id === note._id) setActiveNote(null);
         notify("🗑️ Note deleted", "success");
-      } else notify("Failed to delete note", "error");
+      } else notify("❌ Failed to delete", "error");
     } catch (err) {
       console.error(err);
-      notify("Server error deleting note", "error");
+      notify("⚠️ Error deleting note", "error");
     }
   };
 
@@ -134,13 +140,23 @@ export default function Notes() {
       <header className="topbar">
         <div className="brand">
           <span className="logo">📘</span>
-          <Link to="/" className="title">StudyHub</Link>
+          <Link to="/" className="title">
+            StudyHub
+          </Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link active">Notes</Link>
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/timetable" className="nav-link">Timetable</Link>
-          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
+          <Link to="/notes" className="nav-link active">
+            Notes
+          </Link>
+          <Link to="/courses" className="nav-link">
+            Courses
+          </Link>
+          <Link to="/timetable" className="nav-link">
+            Timetable
+          </Link>
+          <Link to="/ask-doubt" className="nav-link">
+            Ask Doubt
+          </Link>
         </nav>
       </header>
 
@@ -148,18 +164,21 @@ export default function Notes() {
         <aside className="notes-sidebar">
           <div className="sidebar-header">
             <h2>My Notes</h2>
-            <button className="btn btn-primary" onClick={newNote}>+ New Note</button>
+            <button className="btn btn-primary" onClick={newNote}>
+              + New Note
+            </button>
           </div>
 
           {loading ? (
-            <div className="loading">Loading notes...</div>
+            <div className="loading">⏳ Loading notes...</div>
           ) : Array.isArray(notes) && notes.length > 0 ? (
             <div className="notes-list">
               {notes.map((n) => (
                 <div
                   key={n._id || n.id}
                   className={`note-item ${
-                    activeNote && (activeNote._id === n._id || activeNote.id === n.id)
+                    activeNote &&
+                    (activeNote._id === n._id || activeNote.id === n.id)
                       ? "active"
                       : ""
                   }`}
@@ -168,12 +187,18 @@ export default function Notes() {
                     <div className="note-title">{n.title}</div>
                     <div className="note-preview">{previewText(n.content)}</div>
                   </div>
-                  <button className="btn-delete" onClick={() => deleteNote(n)}>🗑️</button>
+                  <button
+                    className="btn-delete"
+                    title="Delete"
+                    onClick={() => deleteNote(n)}
+                  >
+                    🗑️
+                  </button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="empty">No notes found. Create one!</div>
+            <div className="empty">📭 No notes yet. Create one!</div>
           )}
         </aside>
 
@@ -206,15 +231,15 @@ export default function Notes() {
                   onClick={saveNote}
                   disabled={saving}
                 >
-                  {saving ? "Saving..." : "Save"}
+                  {saving ? "💾 Saving..." : "Save Note"}
                 </button>
               </div>
             </div>
           ) : (
             <div className="editor-placeholder">
-              <h3>Select or create a note</h3>
+              <h3>📝 Select or create a note</h3>
               <button className="btn btn-primary" onClick={newNote}>
-                Create Note
+                + Create New
               </button>
             </div>
           )}
