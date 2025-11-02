@@ -1,16 +1,13 @@
-// src/App.js
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "./App.css";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './App.css';
 
-// Pages
-import Home from "./pages/Home";
-import Notes from "./pages/Notes";
-import Courses from "./pages/Courses";
-import AskDoubt from "./pages/AskDoubt";
-import Timetable from "./pages/Timetable";
-import Admin from "./pages/Admin";
-import Auth from "./pages/Auth";
+import Home from './pages/Home';
+import Notes from './pages/Notes';
+import Courses from './pages/Courses';
+import AskDoubt from './pages/AskDoubt';
+import Timetable from './pages/Timetable';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -18,7 +15,6 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/auth" element={<Auth />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/ask-doubt" element={<AskDoubt />} />
@@ -31,4 +27,3 @@ function App() {
 }
 
 export default App;
-
