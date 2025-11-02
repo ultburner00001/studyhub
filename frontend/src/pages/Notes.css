@@ -3,7 +3,7 @@
   background: #f5f7fb;
   display: flex;
   flex-direction: column;
-  color: #222;
+  color: var(--blue-900);
 }
 
 /* ✅ Navbar Styling (same as Timetable.js) */
