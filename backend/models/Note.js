@@ -1,18 +1,13 @@
-import React from "react";
+import mongoose from "mongoose";
 
-function Note({ note, onDelete }) {
-  return (
-    <div className="note-item">
-      <p>{note.text}</p>
-      <button
-        className="btn btn-danger btn-small"
-        onClick={() => onDelete(note._id)}
-      >
-        Delete
-      </button>
-    </div>
-  );
-}
+const noteSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    content: { type: String, required: true, trim: true },
+    subject: { type: String, trim: true },
+  },
+  { timestamps: true }
+);
 
-export default Note;
+export default mongoose.model("Note", noteSchema);
 
