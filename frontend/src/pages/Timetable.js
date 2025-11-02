@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Timetable.css";
 
-const WEEK_DAYS = [
+const allDays = [
   "Monday",
   "Tuesday",
   "Wednesday",
@@ -17,7 +17,7 @@ const Timetable = () => {
   const [editing, setEditing] = useState(false);
   const [schedule, setSchedule] = useState([]);
 
-  // ✅ Fetch timetable
+  // ✅ Fetch timetable from backend
   const fetchTimetable = async () => {
     try {
       setLoading(true);
@@ -25,20 +25,15 @@ const Timetable = () => {
       const data = await res.json();
 
       if (data.success && data.timetable.length > 0) {
-        const serverSchedule = data.timetable[0].schedule;
-        // ensure all 7 days are present
-        const fullSchedule = WEEK_DAYS.map((day) => {
-          const existing = serverSchedule.find((d) => d.day === day);
+        const savedSchedule = data.timetable[0].schedule;
+        // Ensure all days exist
+        const completeSchedule = allDays.map((day) => {
+          const existing = savedSchedule.find((d) => d.day === day);
           return existing || { day, slots: [] };
         });
-        setSchedule(fullSchedule);
+        setSchedule(completeSchedule);
       } else {
-        // default empty schedule
-        const defaultSchedule = WEEK_DAYS.map((day) => ({
-          day,
-          slots: [],
-        }));
-        setSchedule(defaultSchedule);
+        setSchedule(allDays.map((day) => ({ day, slots: [] })));
       }
     } catch (err) {
       console.error("Error fetching timetable:", err);
@@ -51,14 +46,14 @@ const Timetable = () => {
     fetchTimetable();
   }, []);
 
-  // ✅ Add slot
+  // ✅ Add slot to a day
   const addSlot = (dayIndex) => {
     const updated = [...schedule];
     updated[dayIndex].slots.push({ time: "", subject: "", topic: "" });
     setSchedule(updated);
   };
 
-  // ✅ Update slot
+  // ✅ Update slot value
   const updateSlot = (dayIndex, slotIndex, field, value) => {
     const updated = [...schedule];
     updated[dayIndex].slots[slotIndex][field] = value;
@@ -72,14 +67,14 @@ const Timetable = () => {
     setSchedule(updated);
   };
 
-  // ✅ Delete entire day
+  // ✅ Delete entire day (clear all slots)
   const deleteDay = (dayIndex) => {
     const updated = [...schedule];
     updated[dayIndex].slots = [];
     setSchedule(updated);
   };
 
-  // ✅ Save timetable
+  // ✅ Save timetable to backend
   const saveTimetable = async () => {
     try {
       const res = await fetch("https://studyhub-21ux.onrender.com/api/timetable", {
@@ -90,8 +85,8 @@ const Timetable = () => {
       const data = await res.json();
       if (data.success) {
         alert("✅ Timetable saved successfully!");
-        setEditing(false);
         fetchTimetable();
+        setEditing(false);
       }
     } catch (err) {
       console.error("Error saving timetable:", err);
@@ -117,13 +112,19 @@ const Timetable = () => {
           {editing && (
             <div className="editor-pane">
               <h2>Edit Timetable</h2>
+
               {schedule.map((dayObj, i) => (
                 <div key={i} className="editor-day">
                   <div className="day-header">
                     <h3>{dayObj.day}</h3>
-                    <button className="btn delete" onClick={() => deleteDay(i)}>
-                      🗑️ Clear Day
-                    </button>
+                    {dayObj.slots.length > 0 && (
+                      <button
+                        className="btn delete"
+                        onClick={() => deleteDay(i)}
+                      >
+                        🗑️ Clear Day
+                      </button>
+                    )}
                   </div>
 
                   {dayObj.slots.map((slot, j) => (
@@ -132,7 +133,9 @@ const Timetable = () => {
                         type="text"
                         placeholder="Time"
                         value={slot.time}
-                        onChange={(e) => updateSlot(i, j, "time", e.target.value)}
+                        onChange={(e) =>
+                          updateSlot(i, j, "time", e.target.value)
+                        }
                       />
                       <input
                         type="text"
@@ -151,10 +154,10 @@ const Timetable = () => {
                         }
                       />
                       <button
-                        className="btn delete-small"
+                        className="btn delete small"
                         onClick={() => deleteSlot(i, j)}
                       >
-                        ✖
+                        ✕
                       </button>
                     </div>
                   ))}
@@ -167,7 +170,7 @@ const Timetable = () => {
 
               <div className="action-buttons">
                 <button className="btn success" onClick={saveTimetable}>
-                  Save
+                  💾 Save
                 </button>
                 <button
                   className="btn secondary"
@@ -179,41 +182,37 @@ const Timetable = () => {
             </div>
           )}
 
-          {/* ✅ Right: Preview */}
+          {/* ✅ Right: Live Preview */}
           <div className="preview-pane">
             <h2>📅 Current Schedule</h2>
-            {schedule.length > 0 ? (
-              <div className="timetable-grid">
-                {schedule.map((dayObj, i) => (
-                  <div key={i} className="day-card">
-                    <h3>{dayObj.day}</h3>
-                    {dayObj.slots.length > 0 ? (
-                      <ul>
-                        {dayObj.slots.map((slot, j) => (
-                          <li key={j}>
-                            <p>
-                              <strong>Time:</strong> {slot.time}
+            <div className="timetable-grid">
+              {schedule.map((dayObj, i) => (
+                <div key={i} className="day-card">
+                  <h3>{dayObj.day}</h3>
+                  {dayObj.slots.length > 0 ? (
+                    <ul>
+                      {dayObj.slots.map((slot, j) => (
+                        <li key={j}>
+                          <p>
+                            <strong>Time:</strong> {slot.time}
+                          </p>
+                          <p>
+                            <strong>Subject:</strong> {slot.subject}
+                          </p>
+                          {slot.topic && (
+                            <p className="topic">
+                              <strong>Topic:</strong> {slot.topic}
                             </p>
-                            <p>
-                              <strong>Subject:</strong> {slot.subject}
-                            </p>
-                            {slot.topic && (
-                              <p className="topic">
-                                <strong>Topic:</strong> {slot.topic}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="empty-day">No classes scheduled</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="empty">No timetable found.</p>
-            )}
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-day">No classes scheduled</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
