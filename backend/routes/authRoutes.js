@@ -1,5 +1,5 @@
 import express from "express";
-import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -7,24 +7,18 @@ const router = express.Router();
 // ✅ Register new user
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ success: false, message: "All fields are required" });
+    const { username, email, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
+    const existing = await User.findOne({ email });
+    if (existing) {
       return res.status(400).json({ success: false, message: "Email already registered" });
+    }
 
-    const user = await User.create({ name, email, password });
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secretkey", {
-      expiresIn: "7d",
-    });
+    const hashed = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashed });
+    await newUser.save();
 
-    res.status(201).json({
-      success: true,
-      token,
-      user: { id: user._id, name: user.name, email: user.email },
-    });
+    res.status(201).json({ success: true, data: newUser });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -34,21 +28,18 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ success: false, message: "Invalid credentials" });
+    if (!user) return res.status(400).json({ success: false, message: "User not found" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secretkey", {
-      expiresIn: "7d",
-    });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
     res.json({
       success: true,
-      token,
-      user: { id: user._id, name: user.name, email: user.email },
+      message: "Login successful",
+      userId: user._id,
+      username: user.username,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
