@@ -1,3 +1,4 @@
+// src/pages/Timetable.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./Timetable.css";
@@ -14,24 +15,24 @@ const Timetable = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  // Show temporary toast
   const showToast = (message, type = "info") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
   };
 
-  // Fetch and group timetable by day
   const fetchTimetable = async () => {
     try {
+      setLoading(true);
       const userId = localStorage.getItem("studyhub_user_id");
       if (!userId) {
-        showToast("Login required", "warning");
-        setLoading(false);
+        showToast("Login required (set studyhub_user_id in localStorage)", "warning");
+        setTimetable({});
         return;
       }
 
-      const res = await axios.get(${API_BASE}?userId=${userId});
-      const allClasses = res.data.data || [];
+      const res = await axios.get(${API_BASE}?userId=${encodeURIComponent(userId)});
+      // backend should return an array of class objects in res.data.data (or res.data)
+      const allClasses = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
 
       // Group classes by day
       const grouped = allClasses.reduce((acc, cls) => {
@@ -45,6 +46,7 @@ const Timetable = () => {
     } catch (err) {
       console.error("⚠ Fetch Timetable error:", err);
       showToast("Failed to load timetable", "error");
+      setTimetable({});
     } finally {
       setLoading(false);
     }
@@ -52,19 +54,27 @@ const Timetable = () => {
 
   useEffect(() => {
     fetchTimetable();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Add a class
   const handleAdd = async (e) => {
     e.preventDefault();
     const userId = localStorage.getItem("studyhub_user_id");
-    if (!userId) return showToast("Login required", "warning");
+    if (!userId) {
+      return showToast("Login required", "warning");
+    }
     if (!subject.trim() || !time.trim()) {
-      return showToast("Please fill all fields", "warning");
+      return showToast("Please fill subject and time", "warning");
     }
 
     try {
-      await axios.post(API_BASE, { userId, day, subject, time, teacher });
+      await axios.post(API_BASE, {
+        userId,
+        day,
+        subject: subject.trim(),
+        time: time.trim(),
+        teacher: teacher.trim() || undefined,
+      });
       showToast("Class added successfully!", "success");
       setSubject("");
       setTime("");
@@ -76,47 +86,33 @@ const Timetable = () => {
     }
   };
 
-  // Delete a class
   const handleDelete = async (classId) => {
+    if (!window.confirm("Delete this class?")) return;
     try {
       await axios.delete(${API_BASE}/${classId});
       showToast("Class deleted", "success");
       fetchTimetable();
     } catch (err) {
       console.error("Delete Error:", err);
-      showToast("Failed to delete class", "error");
+      showToast("Failed to delete", "error");
     }
   };
 
-  const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   return (
     <div className="timetable-page">
-      {/* ===== NAVBAR ===== */}
+      {/* NAVBAR */}
       <header className="topbar gradient-nav">
         <div className="brand">
           <span className="logo">📚</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
+          <Link to="/" className="title">StudyHub</Link>
         </div>
+
         <nav className="nav">
-          <Link to="/notes" className="nav-link">
-            Notes
-          </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link active">
-            Timetable
-          </Link>
+          <Link to="/notes" className="nav-link">Notes</Link>
+          <Link to="/courses" className="nav-link">Courses</Link>
+          <Link to="/timetable" className="nav-link active">Timetable</Link>
           <a
             href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
             target="_blank"
@@ -125,74 +121,64 @@ const Timetable = () => {
           >
             PYQs
           </a>
-          <Link to="/ask-doubt" className="nav-link">
-            Ask Doubt
-          </Link>
+          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
         </nav>
+
         <div className="actions">
-          <Link to="/" className="btn btn-outline">
-            🏠 Home
-          </Link>
+          <Link to="/" className="btn btn-outline">🏠 Home</Link>
         </div>
       </header>
 
-      {/* ===== FORM ===== */}
+      {/* FORM */}
       <div className="form-card">
         <select value={day} onChange={(e) => setDay(e.target.value)}>
           {days.map((d) => (
-            <option key={d}>{d}</option>
+            <option key={d} value={d}>{d}</option>
           ))}
         </select>
+
         <input
           type="text"
           placeholder="Subject"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
         />
+
         <input
           type="text"
-          placeholder="Time"
+          placeholder="Time (e.g. 9:00 AM)"
           value={time}
           onChange={(e) => setTime(e.target.value)}
         />
+
         <input
           type="text"
           placeholder="Teacher (optional)"
           value={teacher}
           onChange={(e) => setTeacher(e.target.value)}
         />
-        <button className="btn-primary" onClick={handleAdd}>
-          ➕ Add Class
-        </button>
+
+        <button className="btn btn-primary" onClick={handleAdd}>➕ Add Class</button>
       </div>
 
-      {/* ===== TIMETABLE DISPLAY ===== */}
+      {/* TIMETABLE DISPLAY */}
       {loading ? (
         <p className="loading">Loading timetable...</p>
       ) : (
         <div className="timetable-container">
           {days.map((dayName) => {
-            const classes = timetable[dayName] || [];
+            const classes = Array.isArray(timetable[dayName]) ? timetable[dayName] : [];
             return (
               <div key={dayName} className="day-card">
                 <h2>{dayName}</h2>
                 {classes.length > 0 ? (
                   classes.map((cls) => (
-                    <div key={cls._id} className="class-item">
+                    <div key={cls._id || cls.id} className="class-item">
                       <div className="class-info">
-                        <p>
-                          <strong>{cls.subject}</strong> — {cls.time}
-                        </p>
-                        {cls.teacher && (
-                          <p className="teacher">👨‍🏫 {cls.teacher}</p>
-                        )}
+                        <p><strong>{cls.subject}</strong> — {cls.time}</p>
+                        {cls.teacher && <p className="teacher">👨‍🏫 {cls.teacher}</p>}
                       </div>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDelete(cls._id)}
-                      >
-                        🗑
-                      </button>
+                      <button className="btn-delete" onClick={() => handleDelete(cls._id || cls.id)}>🗑</button>
                     </div>
                   ))
                 ) : (
@@ -204,7 +190,7 @@ const Timetable = () => {
         </div>
       )}
 
-      {/* ===== TOAST MESSAGE ===== */}
+      {/* TOAST */}
       {toast && <div className={toast ${toast.type}}>{toast.message}</div>}
     </div>
   );
