@@ -8,6 +8,7 @@ import Courses from "./pages/Courses";
 import AskDoubt from "./pages/AskDoubt";
 import Timetable from "./pages/Timetable";
 import Admin from "./pages/Admin";
+import LoginRegister from "./pages/LoginRegister";
 
 function App() {
   useEffect(() => {
@@ -22,13 +23,14 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/courses" element={<Courses />} />
-          <Route path="/ask-doubt" element={<AskDoubt />} />
-          <Route path="/timetable" element={<Timetable />} />
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
+  <Route path="/login" element={<LoginRegister />} />
+  <Route path="/" element={<Home />} />
+  <Route path="/notes" element={<Notes />} />
+  <Route path="/courses" element={<Courses />} />
+  <Route path="/ask-doubt" element={<AskDoubt />} />
+  <Route path="/timetable" element={<Timetable />} />
+  <Route path="/admin" element={<Admin />} />
+</Routes>
       </div>
     </Router>
   );
