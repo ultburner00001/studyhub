@@ -22,7 +22,7 @@
 }
 
 .gradient-nav {
-  background: linear-gradient(90deg, #0072f5, #5ab2ff);
+  background: var(--blue-900);
   color: #fff;
 }
 
