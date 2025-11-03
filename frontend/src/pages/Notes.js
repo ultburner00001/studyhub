@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Notes.css";
 
+// 👇 Ensure userId is always set for testing/demo (remove later when login works)
+if (!localStorage.getItem("studyhub_user_id")) {
+  localStorage.setItem("studyhub_user_id", "testuser123");
+}
+
 const API_URL =
   process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
 
@@ -26,7 +31,6 @@ function getUserIdFromStorage() {
           return parsed.id || parsed._id || parsed.userId;
         }
       } catch (e) {
-        // maybe it's plain id string
         if (raw && raw.length > 8) return raw;
       }
     }
@@ -39,23 +43,20 @@ function getUserIdFromStorage() {
     }
 
     // Try to decode JWT stored in studyhub_token or token
-    const token = localStorage.getItem("studyhub_token") || localStorage.getItem("token");
+    const token =
+      localStorage.getItem("studyhub_token") || localStorage.getItem("token");
     if (token) {
       const parts = token.split(".");
       if (parts.length === 3) {
         try {
-          // atob available in browsers
-          const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-          // common claims
+          const payload = JSON.parse(
+            atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+          );
           return payload.id || payload.sub || payload.userId || null;
-        } catch (e) {
-          // ignore
-        }
+        } catch (e) {}
       }
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
   return null;
 }
 
@@ -78,22 +79,22 @@ export default function Notes() {
     try {
       const userId = getUserIdFromStorage();
       if (!userId) {
-        notify("Not logged in — set userId in localStorage (studyhub_user_id) to load notes", "warning");
+        notify(
+          "Not logged in — set userId in localStorage (studyhub_user_id) to load notes",
+          "warning"
+        );
         setNotes([]);
         return;
       }
 
       const res = await http.get("/notes", { params: { userId } });
-      // some backends send { success: true, data: notes } or { success, notes }
-      const fetched = res.data?.notes || res.data?.data || (Array.isArray(res.data) ? res.data : []);
-      if (Array.isArray(fetched)) {
-        setNotes(fetched);
-      } else {
-        setNotes([]);
-      }
+      const fetched =
+        res.data?.notes ||
+        res.data?.data ||
+        (Array.isArray(res.data) ? res.data : []);
+      setNotes(Array.isArray(fetched) ? fetched : []);
     } catch (err) {
       console.error("⚠️ Fetch notes error:", err);
-      // show helpful error message for common scenarios
       if (err?.response?.status === 400) {
         notify("Bad request from client — missing or invalid userId (400).", "error");
       } else if (err?.response?.status === 401) {
@@ -139,9 +140,8 @@ export default function Notes() {
 
     setSaving(true);
     try {
-      let res;
       const payload = { title: title.trim() || "Untitled", content: trimmed, userId };
-
+      let res;
       if (activeNote._id) {
         res = await http.put(`/notes/${activeNote._id}`, payload);
       } else {
@@ -150,7 +150,6 @@ export default function Notes() {
 
       if (res.data?.success) {
         notify("✅ Note saved successfully!", "success");
-        // refresh list from server to be safe
         await fetchNotes();
         setActiveNote(null);
       } else {
@@ -188,7 +187,6 @@ export default function Notes() {
           notify("❌ Failed to delete", "error");
         }
       } else {
-        // local only
         setNotes((prev) => prev.filter((n) => n.id !== note.id));
         notify("🗑️ Local note deleted", "info");
       }
@@ -244,12 +242,26 @@ export default function Notes() {
           ) : Array.isArray(notes) && notes.length > 0 ? (
             <div className="notes-list">
               {notes.map((n) => (
-                <div key={n._id || n.id} className={`note-item ${activeNote && (activeNote._id === n._id || activeNote.id === n.id) ? "active" : ""}`}>
+                <div
+                  key={n._id || n.id}
+                  className={`note-item ${
+                    activeNote &&
+                    (activeNote._id === n._id || activeNote.id === n.id)
+                      ? "active"
+                      : ""
+                  }`}
+                >
                   <div onClick={() => openNote(n)} className="note-main">
                     <div className="note-title">{n.title || "Untitled"}</div>
                     <div className="note-preview">{previewText(n.content)}</div>
                   </div>
-                  <button className="btn-delete" title="Delete" onClick={() => deleteNote(n)}>🗑️</button>
+                  <button
+                    className="btn-delete"
+                    title="Delete"
+                    onClick={() => deleteNote(n)}
+                  >
+                    🗑️
+                  </button>
                 </div>
               ))}
             </div>
@@ -261,17 +273,42 @@ export default function Notes() {
         <main className="notes-editor">
           {activeNote ? (
             <div className="editor-wrap">
-              <input type="text" className="note-title-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Note title" />
-              <textarea className="note-content-textarea" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Start typing your note..." />
+              <input
+                type="text"
+                className="note-title-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Note title"
+              />
+              <textarea
+                className="note-content-textarea"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Start typing your note..."
+              />
               <div className="editor-actions">
-                <button className="btn btn-outline" onClick={() => setActiveNote(null)} disabled={saving}>Cancel</button>
-                <button className="btn btn-primary" onClick={saveNote} disabled={saving}>{saving ? "💾 Saving..." : "Save Note"}</button>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setActiveNote(null)}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={saveNote}
+                  disabled={saving}
+                >
+                  {saving ? "💾 Saving..." : "Save Note"}
+                </button>
               </div>
             </div>
           ) : (
             <div className="editor-placeholder">
               <h3>📝 Select or create a note</h3>
-              <button className="btn btn-primary" onClick={newNote}>+ Create New</button>
+              <button className="btn btn-primary" onClick={newNote}>
+                + Create New
+              </button>
             </div>
           )}
         </main>
