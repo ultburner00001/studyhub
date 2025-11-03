@@ -1,62 +1,36 @@
 import React, { useState } from "react";
 import "./LoginRegister.css";
-import { useNavigate } from "react-router-dom";
 
 export default function LoginRegister() {
-  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ username: "", email: "", password: "" });
-  const [message, setMessage] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-  const toggleMode = () => setIsLogin(!isLogin);
+  const toggleForm = () => setIsLogin(!isLogin);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const endpoint = isLogin
-      ? "https://studyhub-21ux.onrender.com/api/auth/login"
-      : "https://studyhub-21ux.onrender.com/api/auth/register";
-
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        setMessage(data.message);
-        return;
-      }
-
-      if (isLogin) {
-        localStorage.setItem("studyhub_user_id", data.userId);
-        localStorage.setItem("studyhub_username", data.username);
-        navigate("/"); // redirect to home
-      } else {
-        setMessage("✅ Registration successful! Please login.");
-        setIsLogin(true);
-      }
-    } catch (err) {
-      setMessage("❌ Error: " + err.message);
-    }
+    // For now just simulate login/register
+    const fakeUserId = "user_" + Math.random().toString(36).substring(2, 8);
+    localStorage.setItem("studyhub_user_id", fakeUserId);
+    alert(`✅ ${isLogin ? "Logged in" : "Registered"} successfully!`);
+    window.location.href = "/notes";
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
+    <div className="login-register-container">
+      <div className="form-card">
         <h2>{isLogin ? "Login" : "Register"}</h2>
         <form onSubmit={handleSubmit}>
           {!isLogin && (
             <input
               type="text"
-              name="username"
-              placeholder="Username"
-              value={formData.username}
+              name="name"
+              placeholder="Full Name"
+              value={form.name}
               onChange={handleChange}
               required
             />
@@ -65,7 +39,7 @@ export default function LoginRegister() {
             type="email"
             name="email"
             placeholder="Email"
-            value={formData.email}
+            value={form.email}
             onChange={handleChange}
             required
           />
@@ -73,16 +47,18 @@ export default function LoginRegister() {
             type="password"
             name="password"
             placeholder="Password"
-            value={formData.password}
+            value={form.password}
             onChange={handleChange}
             required
           />
           <button type="submit">{isLogin ? "Login" : "Register"}</button>
         </form>
-        <p className="toggle-link" onClick={toggleMode}>
-          {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
+        <p>
+          {isLogin ? "Don’t have an account?" : "Already have an account?"}{" "}
+          <button className="link-btn" onClick={toggleForm}>
+            {isLogin ? "Register" : "Login"}
+          </button>
         </p>
-        {message && <p className="message">{message}</p>}
       </div>
     </div>
   );
