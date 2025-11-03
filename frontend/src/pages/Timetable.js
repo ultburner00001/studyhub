@@ -14,20 +14,36 @@ const Timetable = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  // Show temporary toast message
+  // Show temporary toast
   const showToast = (message, type = "info") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
   };
 
-  // Fetch Timetable for logged-in user
+  // Fetch and group timetable by day
   const fetchTimetable = async () => {
     try {
       const userId = localStorage.getItem("studyhub_user_id");
-      const res = await axios.get(`${API_BASE}?userId=${userId}`);
-      setTimetable(res.data.data || {});
+      if (!userId) {
+        showToast("Login required", "warning");
+        setLoading(false);
+        return;
+      }
+
+      const res = await axios.get(${API_BASE}?userId=${userId});
+      const allClasses = res.data.data || [];
+
+      // Group classes by day
+      const grouped = allClasses.reduce((acc, cls) => {
+        const d = cls.day || "Other";
+        if (!acc[d]) acc[d] = [];
+        acc[d].push(cls);
+        return acc;
+      }, {});
+
+      setTimetable(grouped);
     } catch (err) {
-      console.error("⚠️ Fetch Timetable error:", err);
+      console.error("⚠ Fetch Timetable error:", err);
       showToast("Failed to load timetable", "error");
     } finally {
       setLoading(false);
@@ -43,19 +59,12 @@ const Timetable = () => {
     e.preventDefault();
     const userId = localStorage.getItem("studyhub_user_id");
     if (!userId) return showToast("Login required", "warning");
-
     if (!subject.trim() || !time.trim()) {
       return showToast("Please fill all fields", "warning");
     }
 
     try {
-      const res = await axios.post(API_BASE, {
-        userId,
-        day,
-        subject,
-        time,
-        teacher,
-      });
+      await axios.post(API_BASE, { userId, day, subject, time, teacher });
       showToast("Class added successfully!", "success");
       setSubject("");
       setTime("");
@@ -70,12 +79,12 @@ const Timetable = () => {
   // Delete a class
   const handleDelete = async (classId) => {
     try {
-      await axios.delete(`${API_BASE}/${classId}`);
+      await axios.delete(${API_BASE}/${classId});
       showToast("Class deleted", "success");
       fetchTimetable();
     } catch (err) {
       console.error("Delete Error:", err);
-      showToast("Failed to delete", "error");
+      showToast("Failed to delete class", "error");
     }
   };
 
@@ -163,8 +172,7 @@ const Timetable = () => {
       ) : (
         <div className="timetable-container">
           {days.map((dayName) => {
-            const classes =
-              (Array.isArray(timetable[dayName]) && timetable[dayName]) || [];
+            const classes = timetable[dayName] || [];
             return (
               <div key={dayName} className="day-card">
                 <h2>{dayName}</h2>
@@ -183,7 +191,7 @@ const Timetable = () => {
                         className="btn-delete"
                         onClick={() => handleDelete(cls._id)}
                       >
-                        🗑️
+                        🗑
                       </button>
                     </div>
                   ))
@@ -197,7 +205,7 @@ const Timetable = () => {
       )}
 
       {/* ===== TOAST MESSAGE ===== */}
-      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+      {toast && <div className={toast ${toast.type}}>{toast.message}</div>}
     </div>
   );
 };
