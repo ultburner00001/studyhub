@@ -21,6 +21,26 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
+.gradient-nav {
+  background: linear-gradient(90deg, #0072f5, #5ab2ff);
+  color: #fff;
+}
+
+.gradient-nav .nav-link,
+.gradient-nav .title,
+.gradient-nav .btn {
+  color: #fff !important;
+}
+
+.gradient-nav .nav-link:hover,
+.gradient-nav .btn:hover {
+  opacity: 0.85;
+}
+
+.gradient-nav .btn.btn-outline {
+  border: 1px solid #fff;
+}
+
 .brand {
   display: flex;
   align-items: center;
