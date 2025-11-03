@@ -1,18 +1,43 @@
 import express from "express";
 import mongoose from "mongoose";
+import cors from "cors";
 import dotenv from "dotenv";
 
 import noteRoutes from "./routes/noteRoutes.js";
 import timetableRoutes from "./routes/timetableRoutes.js";
-import doubtRoutes from "./routes/doubtRoutes.js";
-import courseRoutes from "./routes/courses.js"; // ✅ added
+import doubtRoutes from "./routes/doubtRoutes.js"; // ✅ Added (for AskDoubt.js)
+import courseRoutes from "./routes/courses.js"; // ✅ Existing
+// If you want authentication later, we’ll add authRoutes here
 
 dotenv.config();
 const app = express();
 
-// ✅ Middleware
+// ✅ Allowed origins (local + main vercel + preview subdomains)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://studyhub-5gij.vercel.app",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (
+        !origin || // allow server-to-server requests
+        allowedOrigins.includes(origin) ||
+        /\.vercel\.app$/.test(origin) // allow Vercel preview deployments
+      ) {
+        callback(null, true);
+      } else {
+        console.warn("❌ Blocked by CORS:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // ✅ MongoDB connection
 const MONGO_URI =
@@ -30,8 +55,8 @@ mongoose
 // ✅ API Routes
 app.use("/api/notes", noteRoutes);
 app.use("/api/timetable", timetableRoutes);
-app.use("/api/doubts", doubtRoutes); // ✅ Added AskDoubts support
-app.use("/api/courses", courseRoutes);
+app.use("/api/doubts", doubtRoutes); // ✅ Added Ask Doubt route
+app.use("/api/courses", courseRoutes); // ✅ Static courses route
 
 // ✅ Health check route
 app.get("/", (req, res) => {
