@@ -188,7 +188,7 @@ export default function Notes() {
         }
       } else {
         setNotes((prev) => prev.filter((n) => n.id !== note.id));
-        notify("🗑️ Local note deleted", "info");
+        notify("🗑️ note deleted", "info");
       }
       setActiveNote(null);
     } catch (err) {
