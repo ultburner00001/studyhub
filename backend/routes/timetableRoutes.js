@@ -1,70 +1,45 @@
-// backend/routes/timetableRoutes.js
 import express from "express";
 import Timetable from "../models/Timetable.js";
 
 const router = express.Router();
 
-// 🧩 GET timetable (read from MongoDB)
+// Get all timetable entries for user
 router.get("/", async (req, res) => {
   try {
-    const timetable = await Timetable.find().lean();
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ success: false, message: "User ID required" });
 
-    if (!timetable || timetable.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No timetable found yet",
-        timetable: [],
-      });
-    }
-
-    // ✅ Format the output for readability
-    const formatted = timetable.map((entry) => ({
-      _id: entry._id,
-      schedule: entry.schedule.map((dayObj) => ({
-        day: dayObj.day,
-        slots: dayObj.slots.map((slot) => ({
-          time: slot.time,
-          subject: slot.subject,
-          topic: slot.topic || "—",
-        })),
-      })),
-    }));
-
-    res.status(200).json({
-      success: true,
-      count: formatted.length,
-      timetable: formatted,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching timetable:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    const data = await Timetable.find({ userId });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// 🧩 POST timetable (save/update)
+// Add new timetable entry
 router.post("/", async (req, res) => {
   try {
-    const { schedule } = req.body;
+    const { day, subject, time, userId } = req.body;
+    if (!userId) return res.status(400).json({ success: false, message: "User ID required" });
 
-    if (!schedule) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Schedule is required" });
-    }
+    const entry = new Timetable({ day, subject, time, userId });
+    await entry.save();
+    res.status(201).json({ success: true, data: entry });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
 
-    // Overwrite existing or create new
-    let existing = await Timetable.findOne();
-    if (existing) {
-      existing.schedule = schedule;
-      await existing.save();
-    } else {
-      existing = await Timetable.create({ schedule });
-    }
-
-    res.status(200).json({ success: true, message: "Timetable saved", data: existing });
-  } catch (error) {
-    console.error("❌ Error saving timetable:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+// Delete entry
+router.delete("/:id", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const entry = await Timetable.findOneAndDelete({ _id: req.params.id, userId });
+    if (!entry)
+      return res.status(404).json({ success: false, message: "Not found or unauthorized" });
+    res.json({ success: true, message: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
