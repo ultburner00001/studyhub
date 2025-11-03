@@ -1,97 +1,143 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import "./Timetable.css";
 
-const allDays = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
 
-const Timetable = () => {
-  const [schedule, setSchedule] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+const http = axios.create({
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 15000,
+});
 
-  // ✅ Fetch timetable from backend
-  const fetchTimetable = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("https://studyhub-21ux.onrender.com/api/timetable");
-      const data = await res.json();
-
-      if (data.success && data.timetable.length > 0) {
-        const saved = data.timetable[0].schedule;
-        const complete = allDays.map((day) => {
-          const existing = saved.find((d) => d.day === day);
-          return existing || { day, slots: [] };
-        });
-        setSchedule(complete);
-      } else {
-        setSchedule(allDays.map((day) => ({ day, slots: [] })));
+// Get userId like in Notes.js
+function getUserIdFromStorage() {
+  try {
+    const userKeys = ["studyhub_user", "user", "currentUser"];
+    for (const k of userKeys) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.id || parsed._id || parsed.userId)
+          return parsed.id || parsed._id || parsed.userId;
+      } catch {
+        if (raw && raw.length > 8) return raw;
       }
+    }
+    const idKeys = ["studyhub_user_id", "userId", "_id"];
+    for (const k of idKeys) {
+      const v = localStorage.getItem(k);
+      if (v) return v;
+    }
+  } catch {}
+  return null;
+}
+
+export default function Timetable() {
+  const [timetable, setTimetable] = useState([]);
+  const [newEntry, setNewEntry] = useState({
+    day: "Monday",
+    subject: "",
+    time: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const notify = (msg, type = "info") => {
+    setMessage({ text: msg, type });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const fetchTimetable = useCallback(async () => {
+    setLoading(true);
+    try {
+      const userId = getUserIdFromStorage();
+      if (!userId) {
+        notify("Please log in — no userId found.", "warning");
+        setTimetable([]);
+        return;
+      }
+
+      const res = await http.get("/timetable", { params: { userId } });
+      setTimetable(res.data?.data || res.data?.timetable || []);
     } catch (err) {
-      console.error("Error fetching timetable:", err);
+      console.error("⚠️ Fetch timetable error:", err);
+      if (err?.response?.status === 400) {
+        notify("Bad request: missing userId (400)", "error");
+      } else {
+        notify("Error loading timetable", "error");
+      }
+      setTimetable([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTimetable();
-  }, []);
+  }, [fetchTimetable]);
 
-  // ✅ Add, Update, Delete Functions
-  const addSlot = (dayIndex) => {
-    const updated = [...schedule];
-    updated[dayIndex].slots.push({ time: "", subject: "", topic: "" });
-    setSchedule(updated);
-  };
+  const addEntry = async () => {
+    const { day, subject, time } = newEntry;
+    if (!subject.trim() || !time.trim()) {
+      return notify("Please fill subject and time", "warning");
+    }
 
-  const updateSlot = (dayIndex, slotIndex, field, value) => {
-    const updated = [...schedule];
-    updated[dayIndex].slots[slotIndex][field] = value;
-    setSchedule(updated);
-  };
+    const userId = getUserIdFromStorage();
+    if (!userId) {
+      notify("Not logged in", "error");
+      return;
+    }
 
-  const deleteSlot = (dayIndex, slotIndex) => {
-    const updated = [...schedule];
-    updated[dayIndex].slots.splice(slotIndex, 1);
-    setSchedule(updated);
-  };
-
-  const deleteDay = (dayIndex) => {
-    const updated = [...schedule];
-    updated[dayIndex].slots = [];
-    setSchedule(updated);
-  };
-
-  // ✅ Save timetable to backend
-  const saveTimetable = async () => {
     try {
-      const res = await fetch("https://studyhub-21ux.onrender.com/api/timetable", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ schedule }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("✅ Timetable saved successfully!");
+      const res = await http.post("/timetable", { day, subject, time, userId });
+      if (res.data?.success) {
+        notify("✅ Added to timetable!", "success");
+        setNewEntry({ day: "Monday", subject: "", time: "" });
         fetchTimetable();
-        setEditing(false);
       }
     } catch (err) {
-      console.error("Error saving timetable:", err);
+      console.error(err);
+      notify("Failed to add entry", "error");
     }
   };
 
+  const deleteEntry = async (id) => {
+    if (!window.confirm("Delete this class?")) return;
+    const userId = getUserIdFromStorage();
+    if (!userId) {
+      notify("Not logged in", "error");
+      return;
+    }
+
+    try {
+      const res = await http.delete(`/timetable/${id}`, { params: { userId } });
+      if (res.data?.success) {
+        notify("🗑️ Entry deleted", "success");
+        fetchTimetable();
+      }
+    } catch (err) {
+      console.error(err);
+      notify("Failed to delete", "error");
+    }
+  };
+
+  const days = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
   return (
     <div className="timetable-page">
-      {/* ✅ Navbar */}
+      {message && <div className={`toast ${message.type}`}>{message.text}</div>}
+
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
@@ -116,128 +162,64 @@ const Timetable = () => {
         </div>
       </header>
 
-      {/* ✅ Main Content */}
-      <div className="timetable-wrapper">
-        <div className="timetable-header">
-          <h1>🗓️ Study Timetable</h1>
-          {!editing ? (
-            <button className="btn primary" onClick={() => setEditing(true)}>
-              ✏️ Edit
-            </button>
-          ) : (
-            <button className="btn secondary" onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-          )}
+      <div className="timetable-container">
+        <div className="add-entry">
+          <h2>Add Class</h2>
+          <select
+            value={newEntry.day}
+            onChange={(e) => setNewEntry({ ...newEntry, day: e.target.value })}
+          >
+            {days.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Subject"
+            value={newEntry.subject}
+            onChange={(e) => setNewEntry({ ...newEntry, subject: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="Time (e.g., 10:00 AM)"
+            value={newEntry.time}
+            onChange={(e) => setNewEntry({ ...newEntry, time: e.target.value })}
+          />
+          <button onClick={addEntry} className="btn btn-primary">Add</button>
         </div>
 
         {loading ? (
-          <div className="loading">Loading...</div>
+          <div className="loading">⏳ Loading timetable...</div>
         ) : (
-          <div className={`timetable-two-column ${editing ? "active" : ""}`}>
-            {/* ✅ Editor Pane */}
-            {editing && (
-              <div className="editor-pane">
-                <h2>Edit Timetable</h2>
-                {schedule.map((dayObj, i) => (
-                  <div key={i} className="editor-day">
-                    <div className="day-header">
-                      <h3>{dayObj.day}</h3>
-                      {dayObj.slots.length > 0 && (
+          <div className="days-grid">
+            {days.map((day) => {
+              const entries = timetable.filter((t) => t.day === day);
+              return (
+                <div key={day} className="day-card">
+                  <h3>{day}</h3>
+                  {entries.length > 0 ? (
+                    entries.map((item) => (
+                      <div key={item._id} className="timetable-item">
+                        <div>
+                          <strong>{item.subject}</strong> — {item.time}
+                        </div>
                         <button
-                          className="btn delete"
-                          onClick={() => deleteDay(i)}
+                          className="btn-delete"
+                          onClick={() => deleteEntry(item._id)}
                         >
-                          🗑️ Clear Day
-                        </button>
-                      )}
-                    </div>
-
-                    {dayObj.slots.map((slot, j) => (
-                      <div key={j} className="slot-row">
-                        <input
-                          type="text"
-                          placeholder="Time"
-                          value={slot.time}
-                          onChange={(e) =>
-                            updateSlot(i, j, "time", e.target.value)
-                          }
-                        />
-                        <input
-                          type="text"
-                          placeholder="Subject"
-                          value={slot.subject}
-                          onChange={(e) =>
-                            updateSlot(i, j, "subject", e.target.value)
-                          }
-                        />
-                        <input
-                          type="text"
-                          placeholder="Topic (optional)"
-                          value={slot.topic}
-                          onChange={(e) =>
-                            updateSlot(i, j, "topic", e.target.value)
-                          }
-                        />
-                        <button
-                          className="btn delete small"
-                          onClick={() => deleteSlot(i, j)}
-                        >
-                          ✕
+                          🗑️
                         </button>
                       </div>
-                    ))}
-                    <button className="btn text" onClick={() => addSlot(i)}>
-                      + Add Slot
-                    </button>
-                  </div>
-                ))}
-
-                <div className="action-buttons">
-                  <button className="btn success" onClick={saveTimetable}>
-                    💾 Save
-                  </button>
+                    ))
+                  ) : (
+                    <div className="empty">No classes added</div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* ✅ Preview Pane */}
-            <div className="preview-pane">
-              <h2>📅 Current Schedule</h2>
-              <div className="timetable-grid">
-                {schedule.map((dayObj, i) => (
-                  <div key={i} className="day-card">
-                    <h3>{dayObj.day}</h3>
-                    {dayObj.slots.length > 0 ? (
-                      <ul>
-                        {dayObj.slots.map((slot, j) => (
-                          <li key={j}>
-                            <p>
-                              <strong>Time:</strong> {slot.time}
-                            </p>
-                            <p>
-                              <strong>Subject:</strong> {slot.subject}
-                            </p>
-                            {slot.topic && (
-                              <p className="topic">
-                                <strong>Topic:</strong> {slot.topic}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="empty-day">No sessions</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default Timetable;
+}
