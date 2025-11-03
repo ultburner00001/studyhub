@@ -5,52 +5,36 @@ import dotenv from "dotenv";
 
 import noteRoutes from "./routes/noteRoutes.js";
 import timetableRoutes from "./routes/timetableRoutes.js";
-import doubtRoutes from "./routes/doubtRoutes.js"; // ✅ For AskDoubt.js
-import courseRoutes from "./routes/courses.js"; // ✅ Existing
+import doubtRoutes from "./routes/doubtRoutes.js";
+import courseRoutes from "./routes/courses.js";
+import authRoutes from "./routes/authRoutes.js"; // ✅ Added
 
 dotenv.config();
 const app = express();
 
-// ✅ Allow all origins (simplified CORS for development & deployment)
-app.use(
-  cors({
-    origin: "*", // no restriction for localhost, Render, or Vercel
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: false,
-  })
-);
-
+// Basic CORS (no restriction)
+app.use(cors());
 app.use(express.json());
 
-// ✅ MongoDB connection
+// MongoDB
 const MONGO_URI =
   process.env.MONGO_URI ||
   "mongodb+srv://ultburner00001_db_user:burner1234@studyhub.nwqwfgv.mongodb.net/?retryWrites=true&w=majority";
 
 mongoose
-  .connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB connected successfully"))
-  .catch((err) => console.error("❌ MongoDB connection failed:", err));
+  .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB error:", err));
 
-// ✅ API Routes
+// Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/timetable", timetableRoutes);
-app.use("/api/doubts", doubtRoutes); // ✅ Ask Doubt route
-app.use("/api/courses", courseRoutes); // ✅ Courses route
+app.use("/api/doubts", doubtRoutes);
+app.use("/api/courses", courseRoutes);
 
-// ✅ Health check
-app.get("/", (req, res) => {
-  res.send("📚 StudyHub Backend is running successfully!");
-});
+app.get("/", (req, res) => res.send("📚 StudyHub Backend Running"));
 
-// ✅ 404 handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: "Route not found" });
-});
-
-// ✅ Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(process.env.PORT || 5000, () =>
+  console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
+);
