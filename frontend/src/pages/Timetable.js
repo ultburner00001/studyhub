@@ -1,147 +1,113 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./Timetable.css";
+import { Link } from "react-router-dom";
 
-const API_URL =
-  process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
+const API_BASE = "https://studyhub-21ux.onrender.com/api/timetable";
 
-const http = axios.create({
-  baseURL: API_URL,
-  headers: { "Content-Type": "application/json" },
-  timeout: 15000,
-});
-
-// ✅ Get userId from localStorage
-function getUserIdFromStorage() {
-  try {
-    const keys = ["studyhub_user_id", "userId", "_id"];
-    for (const k of keys) {
-      const val = localStorage.getItem(k);
-      if (val) return val;
-    }
-  } catch {}
-  return null;
-}
-
-export default function Timetable() {
+const Timetable = () => {
   const [timetable, setTimetable] = useState({});
-  const [selectedDay, setSelectedDay] = useState("Monday");
+  const [day, setDay] = useState("Monday");
   const [subject, setSubject] = useState("");
   const [time, setTime] = useState("");
   const [teacher, setTeacher] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
 
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-  const notify = (msg, type = "info") => {
-    setMessage({ text: msg, type });
-    setTimeout(() => setMessage(null), 3000);
+  // Show temporary toast message
+  const showToast = (message, type = "info") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
   };
 
-  // ✅ Fetch timetable for logged in user
-  const fetchTimetable = useCallback(async () => {
-    setLoading(true);
+  // Fetch Timetable for logged-in user
+  const fetchTimetable = async () => {
     try {
-      const userId = getUserIdFromStorage();
-      if (!userId) {
-        notify("⚠️ Please login or set user ID in localStorage", "warning");
-        setLoading(false);
-        return;
-      }
-
-      const res = await http.get("/timetable", { params: { userId } });
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        // Convert array → grouped by day
-        const grouped = {};
-        res.data.data.forEach((item) => {
-          const day = item.day || "Unknown";
-          if (!grouped[day]) grouped[day] = [];
-          grouped[day].push(item);
-        });
-        setTimetable(grouped);
-      } else if (Array.isArray(res.data)) {
-        const grouped = {};
-        res.data.forEach((item) => {
-          const day = item.day || "Unknown";
-          if (!grouped[day]) grouped[day] = [];
-          grouped[day].push(item);
-        });
-        setTimetable(grouped);
-      } else {
-        setTimetable({});
-      }
+      const userId = localStorage.getItem("studyhub_user_id");
+      const res = await axios.get(`${API_BASE}?userId=${userId}`);
+      setTimetable(res.data.data || {});
     } catch (err) {
-      console.error("⚠️ Fetch timetable error:", err);
-      notify("Failed to fetch timetable", "error");
+      console.error("⚠️ Fetch Timetable error:", err);
+      showToast("Failed to load timetable", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchTimetable();
-  }, [fetchTimetable]);
+  }, []);
 
-  // ✅ Add a new class
-  const addSubject = async () => {
-    const userId = getUserIdFromStorage();
-    if (!userId) return notify("Please login before adding", "error");
-    if (!subject.trim() || !time.trim()) return notify("Enter subject and time", "warning");
+  // Add a class
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    const userId = localStorage.getItem("studyhub_user_id");
+    if (!userId) return showToast("Login required", "warning");
+
+    if (!subject.trim() || !time.trim()) {
+      return showToast("Please fill all fields", "warning");
+    }
 
     try {
-      const payload = { day: selectedDay, subject, time, teacher, userId };
-      const res = await http.post("/timetable", payload);
-      if (res.data?.success) {
-        notify("✅ Subject added successfully!", "success");
-        setSubject("");
-        setTime("");
-        setTeacher("");
-        fetchTimetable();
-      } else {
-        notify("❌ Failed to add subject", "error");
-      }
+      const res = await axios.post(API_BASE, {
+        userId,
+        day,
+        subject,
+        time,
+        teacher,
+      });
+      showToast("Class added successfully!", "success");
+      setSubject("");
+      setTime("");
+      setTeacher("");
+      fetchTimetable();
     } catch (err) {
-      console.error("⚠️ Add subject error:", err);
-      notify("Error adding subject", "error");
+      console.error("Add Error:", err);
+      showToast("Failed to add class", "error");
     }
   };
 
-  // ✅ Delete a class
-  const deleteSubject = async (id) => {
-    const userId = getUserIdFromStorage();
-    if (!userId) return notify("Please login before deleting", "error");
-    if (!window.confirm("Delete this class?")) return;
-
+  // Delete a class
+  const handleDelete = async (classId) => {
     try {
-      const res = await http.delete(`/timetable/${id}`, { params: { userId } });
-      if (res.data?.success) {
-        notify("🗑️ Deleted successfully", "success");
-        fetchTimetable();
-      } else {
-        notify("❌ Delete failed", "error");
-      }
+      await axios.delete(`${API_BASE}/${classId}`);
+      showToast("Class deleted", "success");
+      fetchTimetable();
     } catch (err) {
-      console.error("⚠️ Delete error:", err);
-      notify("Error deleting class", "error");
+      console.error("Delete Error:", err);
+      showToast("Failed to delete", "error");
     }
   };
+
+  const days = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
 
   return (
     <div className="timetable-page">
-      {message && <div className={`toast ${message.type}`}>{message.text}</div>}
-
-      {/* === NAVBAR === */}
-      <header className="topbar">
+      {/* ===== NAVBAR ===== */}
+      <header className="topbar gradient-nav">
         <div className="brand">
           <span className="logo">📚</span>
-          <Link to="/" className="title">StudyHub</Link>
+          <Link to="/" className="title">
+            StudyHub
+          </Link>
         </div>
         <nav className="nav">
-          <Link to="/notes" className="nav-link">Notes</Link>
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/timetable" className="nav-link active">Timetable</Link>
+          <Link to="/notes" className="nav-link">
+            Notes
+          </Link>
+          <Link to="/courses" className="nav-link">
+            Courses
+          </Link>
+          <Link to="/timetable" className="nav-link active">
+            Timetable
+          </Link>
           <a
             href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
             target="_blank"
@@ -150,18 +116,22 @@ export default function Timetable() {
           >
             PYQs
           </a>
-          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
+          <Link to="/ask-doubt" className="nav-link">
+            Ask Doubt
+          </Link>
         </nav>
         <div className="actions">
-          <Link to="/" className="btn btn-outline">🏠 Home</Link>
+          <Link to="/" className="btn btn-outline">
+            🏠 Home
+          </Link>
         </div>
       </header>
 
-      {/* === ADD SUBJECT FORM === */}
-      <section className="form-card">
-        <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}>
-          {days.map((day) => (
-            <option key={day}>{day}</option>
+      {/* ===== FORM ===== */}
+      <div className="form-card">
+        <select value={day} onChange={(e) => setDay(e.target.value)}>
+          {days.map((d) => (
+            <option key={d}>{d}</option>
           ))}
         </select>
         <input
@@ -172,7 +142,7 @@ export default function Timetable() {
         />
         <input
           type="text"
-          placeholder="Time (e.g., 9:00 AM)"
+          placeholder="Time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
         />
@@ -182,43 +152,54 @@ export default function Timetable() {
           value={teacher}
           onChange={(e) => setTeacher(e.target.value)}
         />
-        <button className="btn btn-primary" onClick={addSubject}>+ Add Class</button>
-      </section>
+        <button className="btn-primary" onClick={handleAdd}>
+          ➕ Add Class
+        </button>
+      </div>
 
-      {/* === DISPLAY TIMETABLE === */}
+      {/* ===== TIMETABLE DISPLAY ===== */}
       {loading ? (
-        <div className="loading">⏳ Loading timetable...</div>
+        <p className="loading">Loading timetable...</p>
       ) : (
         <div className="timetable-container">
-          {days.map((day) => {
-            const classes = timetable[day] || [];
+          {days.map((dayName) => {
+            const classes =
+              (Array.isArray(timetable[dayName]) && timetable[dayName]) || [];
             return (
-              <div key={day} className="day-card">
-                <h2>{day}</h2>
+              <div key={dayName} className="day-card">
+                <h2>{dayName}</h2>
                 {classes.length > 0 ? (
-                  classes.map((c) => (
-                    <div key={c._id || c.id} className="class-item">
+                  classes.map((cls) => (
+                    <div key={cls._id} className="class-item">
                       <div className="class-info">
-                        <p><b>Subject:</b> {c.subject}</p>
-                        <p><b>Time:</b> {c.time}</p>
-                        {c.teacher && <p><b>Teacher:</b> {c.teacher}</p>}
+                        <p>
+                          <strong>{cls.subject}</strong> — {cls.time}
+                        </p>
+                        {cls.teacher && (
+                          <p className="teacher">👨‍🏫 {cls.teacher}</p>
+                        )}
                       </div>
                       <button
                         className="btn-delete"
-                        onClick={() => deleteSubject(c._id)}
+                        onClick={() => handleDelete(cls._id)}
                       >
                         🗑️
                       </button>
                     </div>
                   ))
                 ) : (
-                  <p className="empty">📭 No classes yet</p>
+                  <p className="empty">No classes yet</p>
                 )}
               </div>
             );
           })}
         </div>
       )}
+
+      {/* ===== TOAST MESSAGE ===== */}
+      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
     </div>
   );
-}
+};
+
+export default Timetable;
