@@ -1,11 +1,20 @@
 import mongoose from "mongoose";
 
+const slotSchema = new mongoose.Schema({
+  time: String,
+  subject: String,
+  topic: String,
+});
+
+const daySchema = new mongoose.Schema({
+  day: String,
+  slots: [slotSchema],
+});
+
 const timetableSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true },
-    day: { type: String, required: true },
-    subject: { type: String, required: true },
-    time: { type: String, required: true },
+    userId: { type: String, required: true }, // ✅ each user has their own timetable
+    schedule: [daySchema],
   },
   { timestamps: true }
 );
