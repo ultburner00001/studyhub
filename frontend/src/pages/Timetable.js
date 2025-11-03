@@ -12,22 +12,15 @@ const http = axios.create({
   timeout: 15000,
 });
 
-// ✅ Helper: Fetch user ID from localStorage or token
+// ✅ Get userId from localStorage
 function getUserIdFromStorage() {
   try {
-    const idKeys = ["studyhub_user_id", "userId", "_id"];
-    for (const k of idKeys) {
-      const v = localStorage.getItem(k);
-      if (v) return v;
+    const keys = ["studyhub_user_id", "userId", "_id"];
+    for (const k of keys) {
+      const val = localStorage.getItem(k);
+      if (val) return val;
     }
-    const token = localStorage.getItem("studyhub_token");
-    if (token) {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.id || payload.sub || payload.userId;
-    }
-  } catch {
-    return null;
-  }
+  } catch {}
   return null;
 }
 
@@ -44,26 +37,44 @@ export default function Timetable() {
 
   const notify = (msg, type = "info") => {
     setMessage({ text: msg, type });
-    setTimeout(() => setMessage(null), 2500);
+    setTimeout(() => setMessage(null), 3000);
   };
 
-  // === Fetch timetable from backend ===
+  // ✅ Fetch timetable for logged in user
   const fetchTimetable = useCallback(async () => {
     setLoading(true);
     try {
       const userId = getUserIdFromStorage();
       if (!userId) {
-        notify("Not logged in — please set user ID or login", "warning");
+        notify("⚠️ Please login or set user ID in localStorage", "warning");
         setLoading(false);
         return;
       }
 
       const res = await http.get("/timetable", { params: { userId } });
-      const data = res.data?.timetable || res.data?.data || {};
-      setTimetable(Array.isArray(data) ? {} : data);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        // Convert array → grouped by day
+        const grouped = {};
+        res.data.data.forEach((item) => {
+          const day = item.day || "Unknown";
+          if (!grouped[day]) grouped[day] = [];
+          grouped[day].push(item);
+        });
+        setTimetable(grouped);
+      } else if (Array.isArray(res.data)) {
+        const grouped = {};
+        res.data.forEach((item) => {
+          const day = item.day || "Unknown";
+          if (!grouped[day]) grouped[day] = [];
+          grouped[day].push(item);
+        });
+        setTimetable(grouped);
+      } else {
+        setTimetable({});
+      }
     } catch (err) {
       console.error("⚠️ Fetch timetable error:", err);
-      notify("Error fetching timetable", "error");
+      notify("Failed to fetch timetable", "error");
     } finally {
       setLoading(false);
     }
@@ -73,51 +84,55 @@ export default function Timetable() {
     fetchTimetable();
   }, [fetchTimetable]);
 
-  // === Add a subject ===
+  // ✅ Add a new class
   const addSubject = async () => {
     const userId = getUserIdFromStorage();
-    if (!userId) return notify("Please login before adding subjects", "error");
+    if (!userId) return notify("Please login before adding", "error");
     if (!subject.trim() || !time.trim()) return notify("Enter subject and time", "warning");
 
     try {
       const payload = { day: selectedDay, subject, time, teacher, userId };
       const res = await http.post("/timetable", payload);
-
       if (res.data?.success) {
-        notify("✅ Subject added");
+        notify("✅ Subject added successfully!", "success");
         setSubject("");
         setTime("");
         setTeacher("");
         fetchTimetable();
-      } else notify("❌ Could not add subject", "error");
+      } else {
+        notify("❌ Failed to add subject", "error");
+      }
     } catch (err) {
       console.error("⚠️ Add subject error:", err);
       notify("Error adding subject", "error");
     }
   };
 
-  // === Delete a subject ===
-  const deleteSubject = async (day, id) => {
+  // ✅ Delete a class
+  const deleteSubject = async (id) => {
     const userId = getUserIdFromStorage();
     if (!userId) return notify("Please login before deleting", "error");
+    if (!window.confirm("Delete this class?")) return;
 
     try {
       const res = await http.delete(`/timetable/${id}`, { params: { userId } });
       if (res.data?.success) {
-        notify("🗑️ Deleted successfully");
+        notify("🗑️ Deleted successfully", "success");
         fetchTimetable();
-      } else notify("❌ Delete failed", "error");
+      } else {
+        notify("❌ Delete failed", "error");
+      }
     } catch (err) {
       console.error("⚠️ Delete error:", err);
-      notify("Error deleting subject", "error");
+      notify("Error deleting class", "error");
     }
   };
 
   return (
-    <div className="page timetable">
+    <div className="timetable-page">
       {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
-      {/* === Navbar === */}
+      {/* === NAVBAR === */}
       <header className="topbar">
         <div className="brand">
           <span className="logo">📚</span>
@@ -135,18 +150,18 @@ export default function Timetable() {
           >
             PYQs
           </a>
-          <Link to="/ask-doubt" className="nav-link">AskDoubt</Link>
+          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
         </nav>
         <div className="actions">
           <Link to="/" className="btn btn-outline">🏠 Home</Link>
         </div>
       </header>
 
-      {/* === Add Subject Form === */}
+      {/* === ADD SUBJECT FORM === */}
       <section className="form-card">
         <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}>
-          {days.map((d) => (
-            <option key={d}>{d}</option>
+          {days.map((day) => (
+            <option key={day}>{day}</option>
           ))}
         </select>
         <input
@@ -167,30 +182,37 @@ export default function Timetable() {
           value={teacher}
           onChange={(e) => setTeacher(e.target.value)}
         />
-        <button className="btn btn-add" onClick={addSubject}>+ Add</button>
+        <button className="btn btn-primary" onClick={addSubject}>+ Add Class</button>
       </section>
 
-      {/* === Timetable Display === */}
+      {/* === DISPLAY TIMETABLE === */}
       {loading ? (
         <div className="loading">⏳ Loading timetable...</div>
       ) : (
-        <div className="schedule-list">
+        <div className="timetable-container">
           {days.map((day) => {
-            const entries = timetable[day] || [];
+            const classes = timetable[day] || [];
             return (
-              <div key={day} className="day-section">
-                <h3>{day}</h3>
-                {Array.isArray(entries) && entries.length > 0 ? (
-                  entries.map((e) => (
-                    <div key={e._id || e.id} className="subject-card">
-                      <div><b>Subject:</b> {e.subject}</div>
-                      <div><b>Time:</b> {e.time}</div>
-                      {e.teacher && <div><b>Teacher:</b> {e.teacher}</div>}
-                      <button className="btn-delete" onClick={() => deleteSubject(day, e._id)}>Delete</button>
+              <div key={day} className="day-card">
+                <h2>{day}</h2>
+                {classes.length > 0 ? (
+                  classes.map((c) => (
+                    <div key={c._id || c.id} className="class-item">
+                      <div className="class-info">
+                        <p><b>Subject:</b> {c.subject}</p>
+                        <p><b>Time:</b> {c.time}</p>
+                        {c.teacher && <p><b>Teacher:</b> {c.teacher}</p>}
+                      </div>
+                      <button
+                        className="btn-delete"
+                        onClick={() => deleteSubject(c._id)}
+                      >
+                        🗑️
+                      </button>
                     </div>
                   ))
                 ) : (
-                  <div className="empty">📭 No classes added</div>
+                  <p className="empty">📭 No classes yet</p>
                 )}
               </div>
             );
