@@ -1,210 +1,202 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom"; // Added for navigation
+import React, { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import "./Timetable.css";
 
-const Timetable = () => {
-  const [schedule, setSchedule] = useState({});
-  const [day, setDay] = useState("Monday");
-  const [time, setTime] = useState("");
-  const [subject, setSubject] = useState("");
-  const [topic, setTopic] = useState("");
-  const [loading, setLoading] = useState(true);
+const API_URL =
+  process.env.REACT_APP_API_URL || "https://studyhub-21ux.onrender.com/api";
 
-  const userId = localStorage.getItem("studyhub_user_id");
+const http = axios.create({
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 15000,
+});
 
-  // ✅ Fetch timetable for user
-  const fetchTimetable = async () => {
-    if (!userId) {
-      setLoading(false); // Stop loading if no user ID
-      return;
+// ✅ Helper: Fetch user ID from localStorage or token
+function getUserIdFromStorage() {
+  try {
+    const idKeys = ["studyhub_user_id", "userId", "_id"];
+    for (const k of idKeys) {
+      const v = localStorage.getItem(k);
+      if (v) return v;
     }
+    const token = localStorage.getItem("studyhub_token");
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.id || payload.sub || payload.userId;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export default function Timetable() {
+  const [timetable, setTimetable] = useState({});
+  const [selectedDay, setSelectedDay] = useState("Monday");
+  const [subject, setSubject] = useState("");
+  const [time, setTime] = useState("");
+  const [teacher, setTeacher] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  const notify = (msg, type = "info") => {
+    setMessage({ text: msg, type });
+    setTimeout(() => setMessage(null), 2500);
+  };
+
+  // === Fetch timetable from backend ===
+  const fetchTimetable = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch(
-        `https://studyhub-21ux.onrender.com/api/timetable/${userId}`
-      );
-      const data = await res.json();
-      // Ensure data.schedule is an object before setting
-      setSchedule(data?.schedule && typeof data.schedule === 'object' ? data.schedule : {});
+      const userId = getUserIdFromStorage();
+      if (!userId) {
+        notify("Not logged in — please set user ID or login", "warning");
+        setLoading(false);
+        return;
+      }
+
+      const res = await http.get("/timetable", { params: { userId } });
+      const data = res.data?.timetable || res.data?.data || {};
+      setTimetable(Array.isArray(data) ? {} : data);
     } catch (err) {
       console.error("⚠️ Fetch timetable error:", err);
+      notify("Error fetching timetable", "error");
     } finally {
       setLoading(false);
     }
-  };
-
-  // ✅ Add timetable entry
-  const handleAdd = async () => {
-    if (!day || !time || !subject) return alert("Please fill day, time, and subject.");
-    
-    // Simple validation to prevent adding to a schedule that might not be initialised
-    if (loading) return; 
-
-    try {
-      const res = await fetch(
-        `https://studyhub-21ux.onrender.com/api/timetable/add/${userId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ day, time, subject, topic }),
-        }
-      );
-      if (res.ok) {
-        await fetchTimetable();
-        // Reset only the fields that were input
-        setTime("");
-        setSubject("");
-        setTopic("");
-      } else {
-        const errorData = await res.json();
-        alert(`Failed to add entry: ${errorData.message || res.statusText}`);
-      }
-    } catch (err) {
-      console.error("⚠️ Add timetable error:", err);
-      alert("An unexpected error occurred while adding the entry.");
-    }
-  };
-
-  // ✅ Delete timetable entry
-  const handleDelete = async (day, index) => {
-    if (loading) return; // Prevent deletion while loading
-    
-    try {
-      const res = await fetch(
-        `https://studyhub-21ux.onrender.com/api/timetable/delete/${userId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ day, index }),
-        }
-      );
-      if (res.ok) {
-          fetchTimetable();
-      } else {
-          const errorData = await res.json();
-          alert(`Failed to delete entry: ${errorData.message || res.statusText}`);
-      }
-    } catch (err) {
-      console.error("⚠️ Delete timetable error:", err);
-      alert("An unexpected error occurred while deleting the entry.");
-    }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTimetable();
-  }, []);
+  }, [fetchTimetable]);
 
-  const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
+  // === Add a subject ===
+  const addSubject = async () => {
+    const userId = getUserIdFromStorage();
+    if (!userId) return notify("Please login before adding subjects", "error");
+    if (!subject.trim() || !time.trim()) return notify("Enter subject and time", "warning");
 
-  if (!userId) return <div className="page timetable-page-error">Please log in to view your timetable.</div>;
-  if (loading) return <p className="loading-message">Loading timetable...</p>;
+    try {
+      const payload = { day: selectedDay, subject, time, teacher, userId };
+      const res = await http.post("/timetable", payload);
+
+      if (res.data?.success) {
+        notify("✅ Subject added");
+        setSubject("");
+        setTime("");
+        setTeacher("");
+        fetchTimetable();
+      } else notify("❌ Could not add subject", "error");
+    } catch (err) {
+      console.error("⚠️ Add subject error:", err);
+      notify("Error adding subject", "error");
+    }
+  };
+
+  // === Delete a subject ===
+  const deleteSubject = async (day, id) => {
+    const userId = getUserIdFromStorage();
+    if (!userId) return notify("Please login before deleting", "error");
+
+    try {
+      const res = await http.delete(`/timetable/${id}`, { params: { userId } });
+      if (res.data?.success) {
+        notify("🗑️ Deleted successfully");
+        fetchTimetable();
+      } else notify("❌ Delete failed", "error");
+    } catch (err) {
+      console.error("⚠️ Delete error:", err);
+      notify("Error deleting subject", "error");
+    }
+  };
 
   return (
-    <div className="page timetable-page">
-      <nav className="nav">
-        <Link to="/notes" className="nav-link">
-          Notes
-        </Link>
-        <Link to="/courses" className="nav-link">
-          Courses
-        </Link>
-        <Link to="/timetable" className="nav-link active">
-          Timetable
-        </Link>
-        <a
-          href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="nav-link external"
-        >
-          PYQs
-        </a>
-        <Link to="/ask-doubt" className="nav-link">
-          AskDoubt
-        </Link>
-      </nav>
-      
-      <div className="timetable-content">
-        <h2 className="page-title">🕒 Weekly Timetable</h2>
+    <div className="page timetable">
+      {message && <div className={`toast ${message.type}`}>{message.text}</div>}
 
-        {/* ✅ Add New Entry */}
-        <div className="add-entry-card">
-          <select value={day} onChange={(e) => setDay(e.target.value)} className="form-select">
-            {days.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="form-input"
-            aria-label="Time"
-          />
-          <input
-            type="text"
-            placeholder="Subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="form-input"
-            aria-label="Subject"
-          />
-          <input
-            type="text"
-            placeholder="Topic (optional)"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className="form-input"
-            aria-label="Topic"
-          />
-          <button className="btn btn-primary" onClick={handleAdd}>
-            ➕ Add Entry
-          </button>
+      {/* === Navbar === */}
+      <header className="topbar">
+        <div className="brand">
+          <span className="logo">📚</span>
+          <Link to="/" className="title">StudyHub</Link>
         </div>
-        
-        <hr className="divider" />
+        <nav className="nav">
+          <Link to="/notes" className="nav-link">Notes</Link>
+          <Link to="/courses" className="nav-link">Courses</Link>
+          <Link to="/timetable" className="nav-link active">Timetable</Link>
+          <a
+            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+          >
+            PYQs
+          </a>
+          <Link to="/ask-doubt" className="nav-link">AskDoubt</Link>
+        </nav>
+        <div className="actions">
+          <Link to="/" className="btn btn-outline">🏠 Home</Link>
+        </div>
+      </header>
 
-        {/* ✅ Display Timetable */}
-        <div className="schedule-grid">
-          {days.map((dayName) => {
-            const items = Array.isArray(schedule?.[dayName]) ? schedule[dayName] : [];
+      {/* === Add Subject Form === */}
+      <section className="form-card">
+        <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}>
+          {days.map((d) => (
+            <option key={d}>{d}</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder="Subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Time (e.g., 9:00 AM)"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Teacher (optional)"
+          value={teacher}
+          onChange={(e) => setTeacher(e.target.value)}
+        />
+        <button className="btn btn-add" onClick={addSubject}>+ Add</button>
+      </section>
+
+      {/* === Timetable Display === */}
+      {loading ? (
+        <div className="loading">⏳ Loading timetable...</div>
+      ) : (
+        <div className="schedule-list">
+          {days.map((day) => {
+            const entries = timetable[day] || [];
             return (
-              <div key={dayName} className="day-column">
-                <h3 className="day-header">{dayName}</h3>
-                {items.length > 0 ? (
-                  // Sort items by time before mapping
-                  [...items].sort((a, b) => a.time.localeCompare(b.time)).map((entry, i) => (
-                    <div key={i} className="subject-card">
-                      <div className="subject-time">{entry.time}</div>
-                      <div className="subject-details">
-                          <strong>{entry.subject}</strong>
-                          {entry.topic && <span className="subject-topic">{entry.topic}</span>}
-                      </div>
-                      <button
-                        className="btn btn-delete"
-                        onClick={() => handleDelete(dayName, i)}
-                        aria-label={`Delete entry for ${dayName} at ${entry.time}`}
-                      >
-                        🗑️
-                      </button>
+              <div key={day} className="day-section">
+                <h3>{day}</h3>
+                {Array.isArray(entries) && entries.length > 0 ? (
+                  entries.map((e) => (
+                    <div key={e._id || e.id} className="subject-card">
+                      <div><b>Subject:</b> {e.subject}</div>
+                      <div><b>Time:</b> {e.time}</div>
+                      {e.teacher && <div><b>Teacher:</b> {e.teacher}</div>}
+                      <button className="btn-delete" onClick={() => deleteSubject(day, e._id)}>Delete</button>
                     </div>
                   ))
                 ) : (
-                  <p className="empty-slot">Free slot</p>
+                  <div className="empty">📭 No classes added</div>
                 )}
               </div>
             );
           })}
         </div>
-      </div>
+      )}
     </div>
   );
-};
-
-export default Timetable;
+}
