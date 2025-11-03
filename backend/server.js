@@ -5,35 +5,18 @@ import dotenv from "dotenv";
 
 import noteRoutes from "./routes/noteRoutes.js";
 import timetableRoutes from "./routes/timetableRoutes.js";
-import doubtRoutes from "./routes/doubtRoutes.js"; // ✅ Added (for AskDoubt.js)
+import doubtRoutes from "./routes/doubtRoutes.js"; // ✅ For AskDoubt.js
 import courseRoutes from "./routes/courses.js"; // ✅ Existing
-// If you want authentication later, we’ll add authRoutes here
 
 dotenv.config();
 const app = express();
 
-// ✅ Allowed origins (local + main vercel + preview subdomains)
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://studyhub-5gij.vercel.app",
-];
-
+// ✅ Allow all origins (simplified CORS for development & deployment)
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (
-        !origin || // allow server-to-server requests
-        allowedOrigins.includes(origin) ||
-        /\.vercel\.app$/.test(origin) // allow Vercel preview deployments
-      ) {
-        callback(null, true);
-      } else {
-        console.warn("❌ Blocked by CORS:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: "*", // no restriction for localhost, Render, or Vercel
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
+    credentials: false,
   })
 );
 
@@ -55,10 +38,10 @@ mongoose
 // ✅ API Routes
 app.use("/api/notes", noteRoutes);
 app.use("/api/timetable", timetableRoutes);
-app.use("/api/doubts", doubtRoutes); // ✅ Added Ask Doubt route
-app.use("/api/courses", courseRoutes); // ✅ Static courses route
+app.use("/api/doubts", doubtRoutes); // ✅ Ask Doubt route
+app.use("/api/courses", courseRoutes); // ✅ Courses route
 
-// ✅ Health check route
+// ✅ Health check
 app.get("/", (req, res) => {
   res.send("📚 StudyHub Backend is running successfully!");
 });
