@@ -1,22 +1,17 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
-const slotSchema = new mongoose.Schema({
-  time: String,
-  subject: String,
-  topic: String,
-});
+const TimetableSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  // store as array of day objects or simple JSON
+  items: [
+    {
+      day: String,         // "Monday"
+      start: String,       // "09:00"
+      end: String,         // "10:00"
+      title: String,       // "Math"
+      location: String
+    }
+  ]
+}, { timestamps: true });
 
-const daySchema = new mongoose.Schema({
-  day: String,
-  slots: [slotSchema],
-});
-
-const timetableSchema = new mongoose.Schema(
-  {
-    userId: { type: String, required: true }, // ✅ each user has their own timetable
-    schedule: [daySchema],
-  },
-  { timestamps: true }
-);
-
-export default mongoose.model("Timetable", timetableSchema);
+module.exports = mongoose.model('Timetable', TimetableSchema);
