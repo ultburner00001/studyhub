@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+// src/App.js
+import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 
@@ -9,28 +10,21 @@ import AskDoubt from "./pages/AskDoubt";
 import Timetable from "./pages/Timetable";
 import Admin from "./pages/Admin";
 import LoginRegister from "./pages/LoginRegister";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  useEffect(() => {
-    // 🔑 Set default user ID for testing (replace later with real login)
-    if (!localStorage.getItem("studyhub_user_id")) {
-      localStorage.setItem("studyhub_user_id", "testuser123");
-      console.log("✅ Temporary user ID set: testuser123");
-    }
-  }, []);
-
   return (
     <Router>
       <div className="App">
         <Routes>
-  <Route path="/login" element={<LoginRegister />} />
-  <Route path="/" element={<Home />} />
-  <Route path="/notes" element={<Notes />} />
-  <Route path="/courses" element={<Courses />} />
-  <Route path="/ask-doubt" element={<AskDoubt />} />
-  <Route path="/timetable" element={<Timetable />} />
-  <Route path="/admin" element={<Admin />} />
-</Routes>
+          <Route path="/login" element={<LoginRegister />} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+          <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
+          <Route path="/ask-doubt" element={<ProtectedRoute><AskDoubt /></ProtectedRoute>} />
+          <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        </Routes>
       </div>
     </Router>
   );
