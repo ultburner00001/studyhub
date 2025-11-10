@@ -1,214 +1,116 @@
+// src/pages/Timetable.js
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import "./Timetable.css";
-import { Link } from "react-router-dom";
 
-const API_BASE = "https://studyhub-21ux.onrender.com/api/timetable";
+/**
+ * Minimal Timetable page that stores/loads per-user timetable from localStorage.
+ * Keys timetable by `timetable_{userId}` where userId is read from localStorage key "studyhub_user_id".
+ * Copy-paste this file to replace the existing src/pages/Timetable.js
+ */
 
-const Timetable = () => {
-  const [timetable, setTimetable] = useState({});
-  const [day, setDay] = useState("Monday");
-  const [subject, setSubject] = useState("");
-  const [time, setTime] = useState("");
-  const [teacher, setTeacher] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
+const getStorageKey = (userId) => `timetable_${userId || "anon"}`;
 
-  // Show temporary toast
-  const showToast = (message, type = "info") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2500);
-  };
-
-  // Fetch and group timetable by day
-  const fetchTimetable = async () => {
-    try {
-      const userId = localStorage.getItem("studyhub_user_id");
-      if (!userId) {
-        showToast("Login required", "warning");
-        setLoading(false);
-        return;
-      }
-
-      // ✅ FIXED: use backticks for template string
-      const res = await axios.get(`${API_BASE}?userId=${userId}`);
-      const allClasses = res.data.data || [];
-
-      // Group classes by day
-      const grouped = allClasses.reduce((acc, cls) => {
-        const d = cls.day || "Other";
-        if (!acc[d]) acc[d] = [];
-        acc[d].push(cls);
-        return acc;
-      }, {});
-
-      setTimetable(grouped);
-    } catch (err) {
-      console.error("⚠ Fetch Timetable error:", err);
-      showToast("Failed to load timetable", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+export default function Timetable() {
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
-  async function fetchTimetable() {
-    try {
-      // If you used an API helper, call it here:
-      // const res = await api.getTimetable();
-      // setItems(res.data);
-      // Otherwise keep your localStorage logic:
-      const key = `timetable_${localStorage.getItem("studyhub_user_id") || "anon"}`;
-      const raw = localStorage.getItem(key);
-      setItems(raw ? JSON.parse(raw) : []);
-    } catch (err) {
-      console.error("Failed to load timetable", err);
+    async function fetchTimetable() {
+      try {
+        const userId = localStorage.getItem("studyhub_user_id");
+        const key = getStorageKey(userId);
+        const raw = localStorage.getItem(key);
+        setItems(raw ? JSON.parse(raw) : []);
+      } catch (err) {
+        console.error("Failed to load timetable:", err);
+        setItems([]);
+      }
     }
+
+    fetchTimetable();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty - fetchTimetable is declared inside effect
+
+  function saveItems(newItems) {
+    setItems(newItems);
+    const userId = localStorage.getItem("studyhub_user_id");
+    const key = getStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(newItems));
   }
 
-  fetchTimetable();
-}, []); // no dependencies needed now
+  function addRow() {
+    const newRow = { id: `tt_${Date.now()}`, day: "Monday", start: "09:00", end: "10:00", title: "" };
+    saveItems([...items, newRow]);
+  }
 
+  function updateRow(idx, field, value) {
+    const copy = items.slice();
+    copy[idx] = { ...copy[idx], [field]: value };
+    saveItems(copy);
+  }
 
-  // Add a class
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    const userId = localStorage.getItem("studyhub_user_id");
-    if (!userId) return showToast("Login required", "warning");
-    if (!subject.trim() || !time.trim()) {
-      return showToast("Please fill all fields", "warning");
-    }
+  function deleteRow(idx) {
+    const copy = items.filter((_, i) => i !== idx);
+    saveItems(copy);
+  }
 
-    try {
-      await axios.post(API_BASE, { userId, day, subject, time, teacher });
-      showToast("Class added successfully!", "success");
-      setSubject("");
-      setTime("");
-      setTeacher("");
-      fetchTimetable();
-    } catch (err) {
-      console.error("Add Error:", err);
-      showToast("Failed to add class", "error");
-    }
-  };
-
-  // Delete a class
-  const handleDelete = async (classId) => {
-    try {
-      await axios.delete(`${API_BASE}/${classId}`); // ✅ FIXED template string
-      showToast("Class deleted", "success");
-      fetchTimetable();
-    } catch (err) {
-      console.error("Delete Error:", err);
-      showToast("Failed to delete class", "error");
-    }
-  };
-
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const userId = localStorage.getItem("studyhub_user_id");
+  if (!userId) {
+    return (
+      <div style={{ padding: 20 }}>
+        <h2>Timetable</h2>
+        <p>Please login to see your timetable.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="timetable-page">
-      {/* ===== NAVBAR ===== */}
-      <header className="topbar gradient-nav">
-        <div className="brand">
-          <span className="logo">📚</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
-        </div>
-        <nav className="nav">
-          <Link to="/notes" className="nav-link">Notes</Link>
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/timetable" className="nav-link active">Timetable</Link>
-          <a
-            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            PYQs
-          </a>
-          <Link to="/ask-doubt" className="nav-link">Ask Doubt</Link>
-        </nav>
-        <div className="actions">
-          <Link to="/" className="btn btn-outline">🏠 Home</Link>
-        </div>
-      </header>
-
-      {/* ===== FORM ===== */}
-      <div className="form-card">
-        <select value={day} onChange={(e) => setDay(e.target.value)}>
-          {days.map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Subject"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Teacher (optional)"
-          value={teacher}
-          onChange={(e) => setTeacher(e.target.value)}
-        />
-        <button className="btn-primary" onClick={handleAdd}>
-          ➕ Add Class
+    <div style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
+      <h2>Your Timetable</h2>
+      <div style={{ marginBottom: 12 }}>
+        <button onClick={addRow}>Add Row</button>
+        <button onClick={() => saveItems(items)} style={{ marginLeft: 8 }}>
+          Save
         </button>
       </div>
 
-      {/* ===== TIMETABLE DISPLAY ===== */}
-      {loading ? (
-        <p className="loading">Loading timetable...</p>
-      ) : (
-        <div className="timetable-container">
-          {days.map((dayName) => {
-            const classes = timetable[dayName] || [];
-            return (
-              <div key={dayName} className="day-card">
-                <h2>{dayName}</h2>
-                {classes.length > 0 ? (
-                  classes.map((cls) => (
-                    <div key={cls._id} className="class-item">
-                      <div className="class-info">
-                        <p>
-                          <strong>{cls.subject}</strong> — {cls.time}
-                        </p>
-                        {cls.teacher && <p className="teacher">👨‍🏫 {cls.teacher}</p>}
-                      </div>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDelete(cls._id)}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="empty">No classes yet</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ===== TOAST MESSAGE ===== */}
-      {toast && (
-        <div className={`toast ${toast.type}`}>
-          {toast.message}
-        </div>
-      )}
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Day</th>
+            <th style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Start</th>
+            <th style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>End</th>
+            <th style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Title</th>
+            <th style={{ borderBottom: "1px solid #ddd" }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && (
+            <tr>
+              <td colSpan={5} style={{ padding: 12 }}>
+                No timetable rows yet.
+              </td>
+            </tr>
+          )}
+          {items.map((it, idx) => (
+            <tr key={it.id}>
+              <td style={{ padding: 8 }}>
+                <input value={it.day} onChange={(e) => updateRow(idx, "day", e.target.value)} />
+              </td>
+              <td style={{ padding: 8 }}>
+                <input value={it.start} onChange={(e) => updateRow(idx, "start", e.target.value)} />
+              </td>
+              <td style={{ padding: 8 }}>
+                <input value={it.end} onChange={(e) => updateRow(idx, "end", e.target.value)} />
+              </td>
+              <td style={{ padding: 8 }}>
+                <input value={it.title} onChange={(e) => updateRow(idx, "title", e.target.value)} />
+              </td>
+              <td style={{ padding: 8 }}>
+                <button onClick={() => deleteRow(idx)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
-};
-
-export default Timetable;
+}
