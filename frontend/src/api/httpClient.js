@@ -59,24 +59,27 @@ httpClient.interceptors.response.use(
     } else if (error.code === 'ECONNABORTED') {
       message = 'Request timed out. Please retry.';
     }
+    
+    // --- src/api/httpClient.js (excerpt) ---
+switch (status) {
+  case 400:
+    // your existing handling
+    throw new Error('Bad request');
+  case 401:
+    // your existing handling
+    throw new Error('Unauthorized');
+  case 404:
+    // existing handling
+    throw new Error('Not found');
+  // ... other cases you already have
 
-    // 🧱 Specific HTTP codes
-    switch (status) {
-      case 401:
-        message = 'Unauthorized — Please login again.';
-        localStorage.removeItem('studyhub_token');
-        window.location.href = '/auth';
-        break;
-      case 403:
-        message = 'Forbidden — You do not have access.';
-        break;
-      case 404:
-        message = 'Resource not found.';
-        break;
-      case 500:
-        message = 'Server error. Please try again later.';
-        break;
-    }
+  default:
+    // Fallback: return the original response or throw a generic error.
+    // Returning response allows callers to handle it; throwing makes it explicit.
+    // Choose the approach consistent with the file; below we throw a generic error.
+    throw new Error(response?.statusText || `HTTP error ${status}`);
+}
+
 
     // 🔁 Retry (up to 3 times for temporary network issues)
     if (error.message === 'Network Error' && error.config) {
