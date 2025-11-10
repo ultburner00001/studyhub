@@ -1,0 +1,139 @@
+/* Home page styles for StudyHub (simple, responsive) */
+
+.home-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #222;
+}
+
+/* Hero */
+.hero {
+  background: linear-gradient(180deg, rgba(6,78,159,0.06), rgba(102,16,242,0.03));
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  margin: 0 0 8px;
+  color: #0b3a83;
+}
+
+.hero p {
+  margin: 0 0 18px;
+  color: #475569;
+}
+
+/* CTA */
+.cta .btn {
+  display: inline-block;
+  background: #007bff;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.cta .btn:hover {
+  background: #0056b3;
+}
+
+/* Feature strip */
+.strip {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 20px;
+  flex-wrap: wrap;
+}
+
+.strip-left {
+  flex: 1 1 320px;
+}
+
+.strip-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  flex: 2 1 480px;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(20, 40, 80, 0.04);
+  text-align: left;
+}
+
+.card .icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.card-text {
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Courses section */
+.section {
+  padding: 24px 20px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+/* Course card */
+.course {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid #eef2ff;
+}
+
+.course-badge {
+  display: inline-block;
+  background: #e6f0ff;
+  color: #0b3a83;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 18px 12px;
+  color: #64748b;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .hero h1 { font-size: 1.6rem; }
+  .strip { flex-direction: column; gap: 16px; }
+  .strip-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}
