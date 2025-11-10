@@ -1,84 +1,43 @@
-.navbar {
+/* frontend/src/components/Navbar.css */
+.sh-navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-  padding: 10px 20px;
+  padding: 10px 18px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
   position: sticky;
   top: 0;
   z-index: 1000;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-.navbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.sh-left { display:flex; align-items:center; gap:10px; }
+.sh-logo { font-size: 1.4rem; }
+.sh-title { font-weight:600; color:#222; text-decoration:none; }
 
-.navbar-logo {
-  font-size: 1.6rem;
-}
+.sh-nav { display:flex; gap:14px; align-items:center; }
+.sh-link { text-decoration:none; color:#333; font-weight:500; }
+.sh-link:hover { color:#007bff; }
+.sh-link.active { color:#007bff; border-bottom:2px solid #007bff; padding-bottom:2px; }
 
-.navbar-title {
-  font-weight: 600;
-  font-size: 1.2rem;
-  color: #333;
-}
+.sh-toggle { display:none; background:none; border:none; font-size:20px; cursor:pointer; }
 
-.navbar-links {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #333;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-
-.nav-link:hover {
-  color: #007bff;
-}
-
-.nav-link.active {
-  color: #007bff;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 2px;
-}
-
-.menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-/* Responsive - mobile view */
-@media (max-width: 768px) {
-  .navbar-links {
+/* Mobile */
+@media (max-width:768px) {
+  .sh-nav {
     position: absolute;
-    top: 56px;
     left: 0;
-    width: 100%;
+    right: 0;
+    top: 56px;
     background: white;
     flex-direction: column;
-    align-items: flex-start;
-    padding: 12px 20px;
-    gap: 10px;
-    border-bottom: 1px solid #eee;
-    transform: translateY(-150%);
-    transition: transform 0.3s ease;
+    gap: 8px;
+    padding: 12px 16px;
+    transform: translateY(-300%);
+    transition: transform .22s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
   }
-
-  .navbar-links.open {
-    transform: translateY(0);
-  }
-
-  .menu-toggle {
-    display: block;
-  }
+  .sh-nav.open { transform: translateY(0); }
+  .sh-toggle { display:block; }
 }
