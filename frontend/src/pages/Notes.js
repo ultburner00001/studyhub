@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const API = "https://your-backend.onrender.com/api";
+const API = "https://studyhub-21ux.onrender.com/api";
 
 export default function Notes() {
   const userId = localStorage.getItem("studyhub_user_id");
