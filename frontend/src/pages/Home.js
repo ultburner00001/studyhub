@@ -1,20 +1,10 @@
 // src/pages/Home.js
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import "./Home.css";
 
 export default function Home() {
-  const [open, setOpen] = useState(false);
-
-  const menu = [
-    { label: "Notes", href: "/notes" },
-    { label: "Courses", href: "/courses" },
-    { label: "Timetable", href: "/timetable" },
-    { label: "PYQs", href: "https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD" },
-    { label: "Ask Doubt", href: "/ask-doubt" },
-  ];
-
   const features = [
     { emoji: "📝", title: "Notes", desc: "Create and organize study notes", link: "/notes" },
     { emoji: "🎓", title: "Courses", desc: "Learn from curated courses", link: "/courses" },
