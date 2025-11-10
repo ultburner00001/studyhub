@@ -1,259 +1,99 @@
-// 📁 src/pages/AskDoubt.js
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import axios from "axios";
-import "./AskDoubt.css";
+// src/pages/AskDoubt.js
+import React, { useEffect, useState } from "react";
+import Navbar from "../components/Navbar";
 
-const API_BASE = "https://studyhub-21ux.onrender.com/api"; // ✅ Your Render backend
+const API = process.env.REACT_APP_API_BASE || "https://studyhub-21ux.onrender.com/api";
 
-function AskDoubt() {
+export default function AskDoubt() {
   const [doubts, setDoubts] = useState([]);
-  const [newDoubt, setNewDoubt] = useState({
-    question: "",
-    description: "",
-    tags: [],
-  });
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-
-  const tags = [
-    "python",
-    "javascript",
-    "math",
-    "web-dev",
-    "algorithms",
-    "database",
-    "react",
-    "nodejs",
-    "java",
-    "html",
-    "css",
-  ];
-
-  // ✅ Fetch doubts from backend
-  const fetchDoubts = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API_BASE}/doubts`);
-      if (res.data && res.data.success) {
-        setDoubts(res.data.data || []);
-      } else if (Array.isArray(res.data)) {
-        setDoubts(res.data);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load doubts.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [question, setQuestion] = useState("");
+  const [desc, setDesc] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDoubts();
+    let mounted = true;
+    fetch(`${API}/doubts`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        setDoubts(data.data || data || []);
+      })
+      .catch((err) => {
+        console.error("Fetch doubts error:", err);
+        setDoubts([]);
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => { mounted = false; };
   }, []);
 
-  // ✅ Post new doubt
-  const handleSubmitDoubt = async (e) => {
+  const postDoubt = async (e) => {
     e.preventDefault();
-    if (!newDoubt.question.trim()) {
-      setError("Question cannot be empty");
-      return;
-    }
-
-    setSubmitLoading(true);
-    setError("");
-    setMessage("");
-
+    if (!question.trim()) return;
     try {
-      const res = await axios.post(`${API_BASE}/doubts`, {
-        name: "Guest User",
-        question: newDoubt.question,
-        description: newDoubt.description,
-        subject: selectedTags.join(", "),
+      const res = await fetch(`${API}/doubts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Guest", question, description: desc }),
       });
-
-      if (res.data && (res.data.success || res.status === 201)) {
-        setMessage("✅ Question posted successfully!");
-        setNewDoubt({ question: "", description: "", tags: [] });
-        setSelectedTags([]);
-        fetchDoubts();
+      const data = await res.json();
+      if (data.success || res.status === 201) {
+        setDoubts((prev) => [data.data || data.question || data, ...prev]);
+        setQuestion("");
+        setDesc("");
       } else {
-        setError("Failed to post question");
+        // fallback local push
+        setDoubts((prev) => [{ _id: `local-${Date.now()}`, question, description: desc, answers: [] }, ...prev]);
+        setQuestion(""); setDesc("");
       }
     } catch (err) {
-      console.error(err);
-      setError("Error posting question. Try again.");
-    } finally {
-      setSubmitLoading(false);
+      console.error("Post doubt error:", err);
+      setDoubts((prev) => [{ _id: `local-${Date.now()}`, question, description: desc, answers: [] }, ...prev]);
+      setQuestion(""); setDesc("");
     }
-  };
-
-  // ✅ Post answer
-  const handleSubmitAnswer = async (id) => {
-    const answerText = answers[id];
-    if (!answerText?.trim()) return;
-
-    try {
-      const res = await axios.post(`${API_BASE}/doubts/${id}/answers`, {
-        text: answerText,
-        author: { name: "Guest User" },
-      });
-
-      if (res.data && (res.data.success || res.status === 201)) {
-        setAnswers((prev) => ({ ...prev, [id]: "" }));
-        fetchDoubts();
-      }
-    } catch (err) {
-      console.error("Error adding answer:", err);
-      alert("Failed to post answer");
-    }
-  };
-
-  const toggleTag = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag)
-        ? prev.filter((t) => t !== tag)
-        : [...prev, tag]
-    );
   };
 
   return (
-    <div className="ask-doubt-page">
-      {/* ✅ Navbar */}
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo">📚</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
-        </div>
-        <nav className="nav">
-          <Link to="/notes" className="nav-link">
-            Notes
-          </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link">
-            Timetable
-          </Link>
-    <a
-            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            PYQs
-          </a>
-          <Link to="/ask-doubt" className="nav-link active">
-            Ask Doubt
-          </Link>
-        </nav>
-        <div className="actions">
-          <Link to="/" className="btn btn-outline">
-            🏠 Home
-          </Link>
-        </div>
-      </header>
+    <>
+      <Navbar />
+      <div style={{ padding: 20 }}>
+        <h2>Ask a Question</h2>
 
-      {/* ✅ Main Section */}
-      <div className="doubt-container">
-        <h1>Ask a Question</h1>
-
-        {error && <p className="error-message">{error}</p>}
-        {message && <p className="success-message">{message}</p>}
-
-        <form onSubmit={handleSubmitDoubt} className="doubt-form">
+        <form onSubmit={postDoubt} style={{ marginBottom: 16 }}>
           <input
-            type="text"
-            placeholder="Enter your question"
-            value={newDoubt.question}
-            onChange={(e) =>
-              setNewDoubt({ ...newDoubt, question: e.target.value })
-            }
+            placeholder="Short question"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            style={{ width: "100%", padding: 8, marginBottom: 8 }}
           />
           <textarea
-            placeholder="Add description (optional)"
-            value={newDoubt.description}
-            onChange={(e) =>
-              setNewDoubt({ ...newDoubt, description: e.target.value })
-            }
-          ></textarea>
-
-          <div className="tags-container">
-            {tags.map((tag) => (
-              <button
-                type="button"
-                key={tag}
-                className={`tag ${
-                  selectedTags.includes(tag) ? "selected" : ""
-                }`}
-                onClick={() => toggleTag(tag)}
-              >
-                {tag}
-              </button>
-            ))}
+            placeholder="Description (optional)"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            style={{ width: "100%", padding: 8, height: 90 }}
+          />
+          <div style={{ marginTop: 8 }}>
+            <button className="btn btn-primary" type="submit">Post Question</button>
           </div>
-
-          <button className="btn btn-primary" disabled={submitLoading}>
-            {submitLoading ? "Posting..." : "Post Question"}
-          </button>
         </form>
 
-        <h2>Community Questions</h2>
-        {loading ? (
-          <p>Loading questions...</p>
-        ) : doubts.length === 0 ? (
-          <p>No questions yet.</p>
-        ) : (
-          doubts.map((d) => (
-            <div key={d._id} className="doubt-card">
-              <h3>{d.question}</h3>
-              {d.description && <p>{d.description}</p>}
-              <p>
-                <strong>Tags:</strong> {d.subject || "—"}
-              </p>
-
-              <div className="answers-section">
-                <h4>Answers</h4>
+        <h3>Community Questions</h3>
+        {loading ? <p>Loading...</p> : doubts.length === 0 ? <p>No questions yet.</p> : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {doubts.map((d) => (
+              <div key={d._id || d.id} style={{ border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
+                <h4>{d.question}</h4>
+                {d.description && <p>{d.description}</p>}
                 {(d.answers || []).length > 0 ? (
-                  d.answers.map((a, i) => (
-                    <div key={i} className="answer-card">
-                      <strong>{a.author?.name || "Anonymous"}:</strong>{" "}
-                      {a.text}
-                    </div>
-                  ))
-                ) : (
-                  <p>No answers yet</p>
-                )}
-
-                <textarea
-                  placeholder="Write your answer..."
-                  value={answers[d._id] || ""}
-                  onChange={(e) =>
-                    setAnswers((prev) => ({
-                      ...prev,
-                      [d._id]: e.target.value,
-                    }))
-                  }
-                />
-                <button
-                  className="btn btn-small"
-                  onClick={() => handleSubmitAnswer(d._id)}
-                >
-                  Post Answer
-                </button>
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Answers</strong>
+                    {(d.answers || []).map((a, i) => <div key={i}>{a.text}</div>)}
+                  </div>
+                ) : <p style={{ color: "#666" }}>No answers yet</p>}
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
-
-export default AskDoubt;
