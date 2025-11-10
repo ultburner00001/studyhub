@@ -1,23 +1,32 @@
 import React, { useState } from "react";
-import "./LoginRegister.css";
+
+const API = "https://studyhub-21ux.onrender.com/api"; // replace with your Render backend URL
 
 export default function LoginRegister() {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [msg, setMsg] = useState("");
 
   const toggleForm = () => setIsLogin(!isLogin);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // For now just simulate login/register
-    const fakeUserId = "user_" + Math.random().toString(36).substring(2, 8);
-    localStorage.setItem("studyhub_user_id", fakeUserId);
-    alert(`✅ ${isLogin ? "Logged in" : "Registered"} successfully!`);
-    window.location.href = "/notes";
+    setMsg("Loading...");
+    const url = `${API}/${isLogin ? "login" : "register"}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem("studyhub_user_id", data.userId);
+      localStorage.setItem("studyhub_user_name", data.name);
+      window.location.href = "/notes";
+    } else setMsg(data.message || "Error");
   };
 
   return (
@@ -27,7 +36,6 @@ export default function LoginRegister() {
         <form onSubmit={handleSubmit}>
           {!isLogin && (
             <input
-              type="text"
               name="name"
               placeholder="Full Name"
               value={form.name}
@@ -36,7 +44,6 @@ export default function LoginRegister() {
             />
           )}
           <input
-            type="email"
             name="email"
             placeholder="Email"
             value={form.email}
@@ -53,9 +60,10 @@ export default function LoginRegister() {
           />
           <button type="submit">{isLogin ? "Login" : "Register"}</button>
         </form>
+        <p>{msg}</p>
         <p>
-          {isLogin ? "Don’t have an account?" : "Already have an account?"}{" "}
-          <button className="link-btn" onClick={toggleForm}>
+          {isLogin ? "No account?" : "Have an account?"}{" "}
+          <button onClick={toggleForm} className="link-btn">
             {isLogin ? "Register" : "Login"}
           </button>
         </p>
