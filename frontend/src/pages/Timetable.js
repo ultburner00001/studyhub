@@ -52,8 +52,23 @@ const Timetable = () => {
   };
 
   useEffect(() => {
-    fetchTimetable();
-  }, []);
+  async function fetchTimetable() {
+    try {
+      // If you used an API helper, call it here:
+      // const res = await api.getTimetable();
+      // setItems(res.data);
+      // Otherwise keep your localStorage logic:
+      const key = `timetable_${localStorage.getItem("studyhub_user_id") || "anon"}`;
+      const raw = localStorage.getItem(key);
+      setItems(raw ? JSON.parse(raw) : []);
+    } catch (err) {
+      console.error("Failed to load timetable", err);
+    }
+  }
+
+  fetchTimetable();
+}, []); // no dependencies needed now
+
 
   // Add a class
   const handleAdd = async (e) => {
