@@ -1,128 +1,55 @@
+// src/pages/Courses.js
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
 import "./Courses.css";
 
-function Courses() {
+const API = process.env.REACT_APP_API_BASE || "https://studyhub-21ux.onrender.com/api";
+
+export default function Courses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Simple backend fetch: expects /courses to return { success:true, courses: [...] }
   useEffect(() => {
-    fetch("https://studyhub-21ux.onrender.com/api/courses")
-      .then((res) => res.json())
+    let mounted = true;
+    fetch(`${API}/courses`)
+      .then((r) => r.json())
       .then((data) => {
-        if (data.success) setCourses(data.courses);
+        if (!mounted) return;
+        if (data?.success && Array.isArray(data.courses)) setCourses(data.courses);
+        else if (Array.isArray(data)) setCourses(data);
       })
-      .catch((err) => console.error("Error fetching courses:", err))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        // fallback sample list if backend not present
+        setCourses([
+          { id: 1, title: "Intro to Python", level: "Beginner", link: "https://www.youtube.com/watch?v=nLRL_NcnK-4" },
+          { id: 2, title: "Web Development", level: "Intermediate", link: "https://www.youtube.com/watch?v=nu_pCVPKzTk" },
+        ]);
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => { mounted = false; };
   }, []);
 
-  const handleCourseClick = (link) => {
-    window.open(link, "_blank", "noopener,noreferrer");
-  };
-
-  const getLevelColor = (level) => {
-    switch (level) {
-      case "Beginner":
-        return "#22c55e";
-      case "Intermediate":
-        return "#f59e0b";
-      case "Advanced":
-        return "#ef4444";
-      default:
-        return "#6b7280";
-    }
-  };
-
-  if (loading) return <p>Loading courses...</p>;
-
   return (
-    <div className="courses-page">
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo">📚</span>
-          <Link to="/" className="title">
-            StudyHub
-          </Link>
-        </div>
-        <nav className="nav">
-          <Link to="/notes" className="nav-link">
-            Notes
-          </Link>
-          <Link to="/courses" className="nav-link">
-            Courses
-          </Link>
-          <Link to="/timetable" className="nav-link">
-            Timetable
-          </Link>
-          <a
-            href="https://drive.google.com/drive/folders/1IWg3sxnK0abUSWn3UUJckaoSMRSS19UD"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            PYQs
-          </a>
-          <Link to="/ask-doubt" className="nav-link">
-            AskDoubt
-          </Link>
-        </nav>
-        <div className="actions">
-          <Link to="/" className="btn btn-outline">
-            Back to Home
-          </Link>
-        </div>
-      </header>
-
-      <div className="courses-container">
-        <h1>Featured Coding Courses</h1>
-        <p>
-          Master in-demand skills with our comprehensive coding courses taught
-          by industry experts.
-        </p>
-
-        <div className="courses-grid">
-          {courses.map((course) => (
-            <div key={course.id} className="course-card">
-              <div className="course-image">
-                <img src={course.image} alt={course.title} />
-                <div
-                  className="course-level"
-                  style={{ backgroundColor: getLevelColor(course.level) }}
-                >
-                  {course.level}
-                </div>
-                <div className="course-overlay">
-                  <button
-                    className="btn btn-accent preview-btn"
-                    onClick={() => handleCourseClick(course.link)}
-                  >
-                    Watch Preview
-                  </button>
+    <>
+      <Navbar />
+      <div style={{ padding: 20 }}>
+        <h2>Courses</h2>
+        {loading ? <p>Loading courses...</p> : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
+            {courses.map((c) => (
+              <div key={c.id || c.title} style={{ border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
+                <h3>{c.title}</h3>
+                {c.description && <p>{c.description}</p>}
+                <p><strong>Level:</strong> {c.level || c.tag || "All"}</p>
+                <div style={{ marginTop: 8 }}>
+                  <a href={c.link || "#"} target="_blank" rel="noreferrer" className="btn btn-primary">Start</a>
                 </div>
               </div>
-
-              <div className="course-content">
-                <h3>{course.title}</h3>
-                <p className="course-description">{course.description}</p>
-                <p>
-                  <strong>Instructor:</strong> {course.instructor}
-                </p>
-                <p>
-                  ⭐ {course.rating} ({course.students})
-                </p>
-                <button
-                  className="btn btn-primary full-width"
-                  onClick={() => handleCourseClick(course.link)}
-                >
-                  Start Learning
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
-
-export default Courses;
