@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
+import "./LoginRegister.css";
 /**
  * Simple client-side login/register page (dev/demo only).
  * - Stores users in localStorage under key "studyhub_users" (object keyed by email)
