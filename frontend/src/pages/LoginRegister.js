@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./LoginRegister.css";
 
 const API = "https://studyhub-21ux.onrender.com/api"; // replace with your Render backend URL
 
