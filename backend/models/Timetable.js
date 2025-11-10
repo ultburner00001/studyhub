@@ -1,37 +1,17 @@
 const mongoose = require('mongoose');
 
-const timetableSchema = new mongoose.Schema({
-  schedule: [{
-    day: {
-      type: String,
-      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-      required: true
-    },
-    slots: [{
-      time: {
-        type: String,
-        required: true
-      },
-      subject: {
-        type: String,
-        required: true
-      },
-      topic: {
-        type: String
-      },
-      isCompleted: {
-        type: Boolean,
-        default: false
-      }
-    }]
-  }],
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  }
-}, {
-  timestamps: true
-});
+const TimetableSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  // store as array of day objects or simple JSON
+  items: [
+    {
+      day: String,         // "Monday"
+      start: String,       // "09:00"
+      end: String,         // "10:00"
+      title: String,       // "Math"
+      location: String
+    }
+  ]
+}, { timestamps: true });
 
-module.exports = mongoose.model('Timetable', timetableSchema);
+module.exports = mongoose.model('Timetable', TimetableSchema);

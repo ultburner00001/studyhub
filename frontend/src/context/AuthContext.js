@@ -1,172 +1,141 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import httpClient from '../api/httpClient';
+// src/context/AuthContext.js
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-const AuthContext = createContext();
+/**
+ * Very small AuthContext:
+ * - Uses localStorage keys: studyhub_user_id, studyhub_user_name
+ * - Exposes: currentUser, loading, login, register, logout
+ * - Tries backend (fetch) if REACT_APP_API_BASE is set; otherwise works purely local
+ */
+
+const AuthContext = createContext(null);
+
+const API_BASE = process.env.REACT_APP_API_BASE || "/api";
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null); // { id, name } or null
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('studyhub_token'));
 
+  // load session from localStorage on mount
   useEffect(() => {
-    if (token) {
-      getCurrentUser();
+    const id = localStorage.getItem("studyhub_user_id");
+    const name = localStorage.getItem("studyhub_user_name");
+    if (id) {
+      setCurrentUser({ id, name: name || "User" });
     } else {
-      setLoading(false);
+      setCurrentUser(null);
     }
-  }, [token]);
+    setLoading(false);
+  }, []);
 
-  const getCurrentUser = async () => {
-    try {
-      const response = await httpClient.get('/auth/me');
-      const data = response.data;
-      if (data.success) {
-        setCurrentUser(data.user);
-      } else {
-        localStorage.removeItem('studyhub_token');
-        setToken(null);
-      }
-    } catch (error) {
-      console.error('Error getting current user:', error);
-      localStorage.removeItem('studyhub_token');
-      setToken(null);
-    } finally {
-      setLoading(false);
+  // helper to persist session locally
+  const setSession = (user) => {
+    if (!user) {
+      localStorage.removeItem("studyhub_user_id");
+      localStorage.removeItem("studyhub_user_name");
+      setCurrentUser(null);
+      return;
     }
+    localStorage.setItem("studyhub_user_id", user.id);
+    if (user.name) localStorage.setItem("studyhub_user_name", user.name);
+    setCurrentUser({ id: user.id, name: user.name });
   };
 
-  const register = async (userData) => {
+  // register: tries backend, otherwise falls back to local-only store
+  const register = async ({ name, email, password }) => {
+    // basic client validation
+    if (!name || !email || !password) {
+      return { success: false, message: "All fields required" };
+    }
+
+    // try backend if available
     try {
-      const response = await httpClient.post('/auth/register', userData);
-      const data = response.data;
-      if (data.success) {
-        localStorage.setItem('studyhub_token', data.token);
-        setToken(data.token);
-        setCurrentUser(data.user);
-        return { success: true, data };
-      } else {
-        return { 
-          success: false, 
-          error: data.message || 'Registration failed',
-          errors: data.errors 
-        };
+      const res = await fetch(`${API_BASE}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        const user = { id: data.userId || data.id || data._id || String(Date.now()), name: data.name || name };
+        setSession(user);
+        return { success: true, user };
       }
-    } catch (error) {
-      if (error.response) {
-        const data = error.response.data;
-        let errorMessage = data.message || 'Registration failed';
-        if (data.errors && Array.isArray(data.errors)) {
-          errorMessage += ': ' + data.errors.map(e => e.msg).join(', ');
-        }
-        return { 
-          success: false, 
-          error: errorMessage,
-          errors: data.errors 
-        };
-      } else if (error.message === 'Network Error') {
-        return { 
-          success: false, 
-          error: 'Network error. Please check your connection and try again.' 
-        };
-      } else {
-        return { 
-          success: false, 
-          error: 'An unexpected error occurred.' 
-        };
+      // backend returned a non-success response
+      // fall through to local fallback only if backend responded but didn't create user
+      return { success: false, message: data?.message || "Registration failed" };
+    } catch (err) {
+      // Backend not reachable or error -> fallback to local registration using localStorage users map
+      try {
+        const usersKey = "studyhub_users";
+        const raw = localStorage.getItem(usersKey) || "{}";
+        const users = JSON.parse(raw);
+        const em = email.trim().toLowerCase();
+        if (users[em]) return { success: false, message: "Email already registered (local fallback)" };
+        const id = "u_" + Math.random().toString(36).slice(2, 9);
+        users[em] = { id, name, email: em, password };
+        localStorage.setItem(usersKey, JSON.stringify(users));
+        const user = { id, name };
+        setSession(user);
+        return { success: true, user, fallback: true };
+      } catch (e) {
+        return { success: false, message: "Registration failed (unexpected error)" };
       }
     }
   };
 
-  const login = async (email, password) => {
+  // login: tries backend, otherwise falls back to local-only check
+  const login = async ({ email, password }) => {
+    if (!email || !password) return { success: false, message: "Email & password required" };
+
     try {
-      const response = await httpClient.post('/auth/login', { email, password });
-      const data = response.data;
-      if (data.success) {
-        localStorage.setItem('studyhub_token', data.token);
-        setToken(data.token);
-        setCurrentUser(data.user);
-        return { success: true, data };
-      } else {
-        return { 
-          success: false, 
-          error: data.message || 'Login failed',
-          errors: data.errors 
-        };
+      const res = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        const user = { id: data.userId || data.id || data._id || String(Date.now()), name: data.name || "User" };
+        setSession(user);
+        return { success: true, user };
       }
-    } catch (error) {
-      if (error.response) {
-        const data = error.response.data;
-        let errorMessage = data.message || 'Login failed';
-        if (data.errors && Array.isArray(data.errors)) {
-          errorMessage += ': ' + data.errors.map(e => e.msg).join(', ');
-        }
-        return { 
-          success: false, 
-          error: errorMessage,
-          errors: data.errors 
-        };
-      } else if (error.message === 'Network Error') {
-        return { 
-          success: false, 
-          error: 'Network error. Please check your connection and try again.' 
-        };
-      } else {
-        return { 
-          success: false, 
-          error: 'An unexpected error occurred.' 
-        };
+      return { success: false, message: data?.message || "Invalid credentials" };
+    } catch (err) {
+      // fallback local check
+      try {
+        const usersKey = "studyhub_users";
+        const raw = localStorage.getItem(usersKey) || "{}";
+        const users = JSON.parse(raw);
+        const em = email.trim().toLowerCase();
+        const u = users[em];
+        if (!u || u.password !== password) return { success: false, message: "Invalid credentials (local fallback)" };
+        const user = { id: u.id, name: u.name };
+        setSession(user);
+        return { success: true, user, fallback: true };
+      } catch (e) {
+        return { success: false, message: "Login failed (unexpected error)" };
       }
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('studyhub_token');
-    setToken(null);
-    setCurrentUser(null);
-  };
-
-  const updateProfile = async (profileData) => {
-    try {
-      const response = await httpClient.put('/auth/profile', profileData);
-      const data = response.data;
-      if (data.success) {
-        setCurrentUser(data.user);
-        return { success: true, data };
-      } else {
-        return { 
-          success: false, 
-          error: data.message || 'Profile update failed' 
-        };
-      }
-    } catch (error) {
-      return { 
-        success: false, 
-        error: 'Network error. Please try again.' 
-      };
-    }
+    setSession(null);
   };
 
   const value = {
     currentUser,
-    token,
+    loading,
     register,
     login,
     logout,
-    updateProfile,
-    loading
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

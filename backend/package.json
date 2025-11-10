@@ -1,6 +1,7 @@
 {
   "name": "studyhub-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "StudyHub Backend API with MongoDB",
   "main": "server.js",
   "scripts": {
