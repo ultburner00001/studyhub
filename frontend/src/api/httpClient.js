@@ -77,7 +77,7 @@ switch (status) {
     // Fallback: return the original response or throw a generic error.
     // Returning response allows callers to handle it; throwing makes it explicit.
     // Choose the approach consistent with the file; below we throw a generic error.
-    throw new Error(response?.statusText || `HTTP error ${status}`);
+    throw new Error(`HTTP error ${status}`);
 }
 
 
